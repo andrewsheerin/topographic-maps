@@ -14,9 +14,10 @@ import trimesh
 # CONFIG
 # -----------------------------
 
-API_KEY = "YOUR_API_KEY"
+API_KEY = "API KEY"
+API_KEY = "0939b30444a129d362d9e5d64ddf81e2"
 
-SHAPEFILE_PATH = "DATA/JacksonMountain.shp"
+SHAPEFILE_PATH = "DATA/AquidneckIsland.shp"
 OUTPUT_DIR = "outputs"
 
 DEM_DATASET = "USGS10m"

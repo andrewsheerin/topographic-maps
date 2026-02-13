@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Terrain STL Generator</title>
+
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+  />
+
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+
+<div class="layout">
+
+  <aside class="panel">
+    <h1>Terrain STL</h1>
+
+    <!-- 1. AREA -->
+    <section class="section">
+      <h2>1. Area</h2>
+      <p class="hint">
+        Draw a polygon on the map or upload a zipped shapefile.
+      </p>
+
+      <label class="file">
+        <input id="shpInput" type="file" accept=".zip" />
+        <span>Upload shapefile (.zip)</span>
+      </label>
+
+      <button id="clearBtn" type="button">Clear polygon</button>
+    </section>
+
+    <!-- 2. PARAMETERS -->
+    <section class="section">
+      <h2>2. Terrain parameters</h2>
+
+      <div class="field">
+        <label for="demDataset">DEM dataset</label>
+        <select id="demDataset">
+          <option value="USGS10m" selected>USGS 10 m</option>
+          <option value="USGS30m">USGS 30 m</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="downsample">Downsample factor</label>
+        <input id="downsample" type="number" min="1" max="20" value="1" />
+      </div>
+
+      <div class="field">
+        <label for="zScale">Vertical exaggeration (z-scale)</label>
+        <input id="zScale" type="number" step="0.1" value="2.0" />
+      </div>
+
+      <div class="field">
+        <label for="bufferM">Buffer distance (meters)</label>
+        <input id="bufferM" type="number" value="50" />
+      </div>
+
+      <div class="field">
+        <label for="targetMaxMm">Target max size (mm)</label>
+        <input id="targetMaxMm" type="number" value="200" />
+      </div>
+
+      <div class="field">
+        <label for="baseThicknessM">Base thickness (meters)</label>
+
+        <div class="base-inline">
+          <div class="base-check">
+            <input id="addBase" type="checkbox" checked />
+            <div class="base-check-caption">Add base</div>
+          </div>
+
+          <div class="base-input">
+            <input id="baseThicknessM" type="number" value="50" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. ROADS -->
+    <section class="section">
+      <h2>3. Roads</h2>
+
+      <div class="roads-pick">
+        <div class="roads-pick-title">Show / carve these road classes</div>
+
+        <div class="road-row">
+          <label class="road-row-check">
+            <input type="checkbox" class="roadCheck" value="motorway" checked />
+            <span class="road-name">Motorway</span>
+          </label>
+          <input id="roadWidthMotorway" class="road-num" type="number" step="0.1" min="0" value="2.0" title="Motorway width (mm)" aria-label="Motorway width (mm)" />
+          <input id="roadDepthMotorway" class="road-num" type="number" step="0.1" min="0" value="0.5" title="Motorway depth (mm)" aria-label="Motorway depth (mm)" />
+        </div>
+
+        <div class="road-row">
+          <label class="road-row-check">
+            <input type="checkbox" class="roadCheck" value="trunk" checked />
+            <span class="road-name">Trunk</span>
+          </label>
+          <input id="roadWidthTrunk" class="road-num" type="number" step="0.1" min="0" value="1.5" title="Trunk width (mm)" aria-label="Trunk width (mm)" />
+          <input id="roadDepthTrunk" class="road-num" type="number" step="0.1" min="0" value="0.5" title="Trunk depth (mm)" aria-label="Trunk depth (mm)" />
+        </div>
+
+        <div class="road-row">
+          <label class="road-row-check">
+            <input type="checkbox" class="roadCheck" value="primary" checked />
+            <span class="road-name">Primary</span>
+          </label>
+          <input id="roadWidthPrimary" class="road-num" type="number" step="0.1" min="0" value="1.0" title="Primary width (mm)" aria-label="Primary width (mm)" />
+          <input id="roadDepthPrimary" class="road-num" type="number" step="0.1" min="0" value="0.5" title="Primary depth (mm)" aria-label="Primary depth (mm)" />
+        </div>
+
+        <div class="road-row">
+          <label class="road-row-check">
+            <input type="checkbox" class="roadCheck" value="secondary" checked />
+            <span class="road-name">Secondary</span>
+          </label>
+          <input id="roadWidthSecondary" class="road-num" type="number" step="0.1" min="0" value="0.7" title="Secondary width (mm)" aria-label="Secondary width (mm)" />
+          <input id="roadDepthSecondary" class="road-num" type="number" step="0.1" min="0" value="0.5" title="Secondary depth (mm)" aria-label="Secondary depth (mm)" />
+        </div>
+
+        <div class="road-row">
+          <label class="road-row-check">
+            <input type="checkbox" class="roadCheck" value="tertiary" checked />
+            <span class="road-name">Tertiary</span>
+          </label>
+          <input id="roadWidthTertiary" class="road-num" type="number" step="0.1" min="0" value="0.5" title="Tertiary width (mm)" aria-label="Tertiary width (mm)" />
+          <input id="roadDepthTertiary" class="road-num" type="number" step="0.1" min="0" value="0.5" title="Tertiary depth (mm)" aria-label="Tertiary depth (mm)" />
+        </div>
+
+        <div class="road-row">
+          <label class="road-row-check">
+            <input type="checkbox" class="roadCheck" value="residential" checked/>
+            <span class="road-name">Residential</span>
+          </label>
+          <input id="roadWidthResidential" class="road-num" type="number" step="0.1" min="0" value="0.3" title="Residential width (mm)" aria-label="Residential width (mm)" />
+          <input id="roadDepthResidential" class="road-num" type="number" step="0.1" min="0" value="0.5" title="Residential depth (mm)" aria-label="Residential depth (mm)" />
+        </div>
+
+        <div class="road-row-header" aria-hidden="true">
+          <div></div>
+          <div class="road-h">Width (mm)</div>
+          <div class="road-h">Depth (mm)</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="roadsFetchBtn" type="button">Load roads</button>
+        <button id="roadsClearBtn" type="button">Clear roads</button>
+      </div>
+    </section>
+
+    <!-- 4. OUTPUT -->
+    <section class="section">
+      <h2>4. Output</h2>
+
+      <div class="row">
+        <button id="generateBtn" type="button" class="primary">
+          Terrain Only (STL)
+        </button>
+        <button id="bundleBtn" type="button" class="primary">
+          Terrain w/ Roads (ZIP)
+        </button>
+      </div>
+
+      <div id="status" class="status" aria-live="polite"></div>
+    </section>
+
+    <footer class="footer">
+      <div class="small">
+        Requires OpenTopography API key.
+      </div>
+    </footer>
+  </aside>
+
+  <main class="map-wrap">
+    <div id="map"></div>
+  </main>
+
+</div>
+
+<!-- JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="/static/app.js"></script>
+
+</body>
+</html>

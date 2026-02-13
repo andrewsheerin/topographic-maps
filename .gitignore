@@ -1,0 +1,10 @@
+# Ignore local API key file
+API_KEY.txt
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Temp dirs
+terrain_stl_*
+
