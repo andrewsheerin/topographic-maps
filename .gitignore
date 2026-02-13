@@ -1,10 +1,42 @@
-# Ignore local API key file
+# Secrets
 API_KEY.txt
 
-# Python artifacts
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Temp dirs
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Outputs / temp
 terrain_stl_*
+*.stl
+*.zip
+.tmp_out.txt
+.stl_*.txt
 
+# Obsolete folder (removed)
+OLD APP/
+
+# Local helper files
+.bundle_list.txt
+.bundle_path.txt
+
+# API schema snapshot (optional)
+openapi.json
