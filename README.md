@@ -31,7 +31,6 @@ Or create a local file at the repo root:
 
 - `API_KEY.txt`
 
-> Note: `API_KEY.txt` is ignored by git and won’t be committed.
 
 ### 2) Install Python dependencies
 
