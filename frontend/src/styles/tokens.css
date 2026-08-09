@@ -1,0 +1,49 @@
+:root {
+  /* ---------- Color (dark, acid-green theme) ---------- */
+  --color-bg: #0b0f14;
+  --color-surface: #111825;
+  --color-text: #e6edf3;
+  --color-muted: #9fb0c3;
+  --color-accent: #0bf5b2;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-input-bg: rgba(255, 255, 255, 0.06);
+  --color-input-text: #f4f7fb;
+  --color-accent-soft: rgba(11, 245, 178, 0.14);
+  --color-accent-strong: rgba(11, 245, 178, 0.65);
+  --color-hover: rgba(255, 255, 255, 0.04);
+
+  /* Additional colors preserved from the original (kept here as tokens so no
+     raw hex/rgb values live outside this file). */
+  --color-button-bg: rgba(255, 255, 255, 0.05);
+  --color-surface-soft: rgba(255, 255, 255, 0.03);
+  --color-accent-hover: rgba(11, 245, 178, 0.4);
+  --color-select-option: #10151c;
+  --color-text-disabled: rgba(230, 237, 243, 0.65);
+  --color-border-disabled: rgba(255, 255, 255, 0.06);
+
+  /* ---------- Type ---------- */
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-display: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+
+  /* ---------- Space ---------- */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-7: 24px;
+  --space-8: 32px;
+
+  /* ---------- Radius / border ---------- */
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --border-width: 1px;
+}

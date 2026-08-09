@@ -1,0 +1,8 @@
+.field {
+  margin-bottom: var(--space-3);
+}
+
+.field > label {
+  display: inline-block;
+  margin-bottom: var(--space-2);
+}

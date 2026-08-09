@@ -1,0 +1,28 @@
+.layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  height: 100vh;
+}
+
+.panel {
+  background: var(--color-surface);
+  border-right: var(--border-width) solid var(--color-border);
+  padding: var(--space-6);
+  overflow-y: auto;
+}
+
+.mapWrap {
+  position: relative;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 420px 1fr;
+  }
+
+  .panel {
+    border-right: none;
+    border-bottom: var(--border-width) solid var(--color-border);
+  }
+}

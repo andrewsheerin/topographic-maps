@@ -1,0 +1,61 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+#root {
+  height: 100%;
+}
+
+/* ---------- Panel section chrome (shared across all panel sections) ---------- */
+
+h1 {
+  margin: 0 0 var(--space-5) 0;
+  font-size: var(--text-xl);
+}
+
+section {
+  padding: var(--space-5) 0;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+h2 {
+  margin: 0 0 var(--space-3) 0;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+label {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+/* ---------- Base form controls ---------- */
+
+input,
+select {
+  width: 100%;
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-sm);
+  border: var(--border-width) solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-input-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+}
+
+select option {
+  color: var(--color-select-option);
+}

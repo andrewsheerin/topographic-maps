@@ -1,0 +1,10 @@
+.hint {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  margin-bottom: var(--space-3);
+}
+
+.file {
+  display: block;
+  margin-bottom: var(--space-3);
+}

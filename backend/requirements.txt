@@ -1,0 +1,16 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+python-dotenv==1.0.1
+
+numpy
+requests
+geopandas
+rasterio
+shapely
+pyproj
+affine
+trimesh
+
+# If geopandas/rasterio installs are tricky on Windows, use conda-forge for the
+# geospatial stack (geopandas/rasterio/fiona).

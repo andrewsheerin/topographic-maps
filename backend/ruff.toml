@@ -1,0 +1,7 @@
+# Lean, explicit lint config so `verify.py` is reproducible regardless of any
+# global/parent ruff config on the machine. Reproduces ruff's default rule set
+# (pyflakes + a curated subset of pycodestyle) plus import sorting.
+line-length = 88
+
+[lint]
+select = ["E4", "E7", "E9", "F", "I"]

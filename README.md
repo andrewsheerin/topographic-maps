@@ -1,82 +1,94 @@
-# Topographic Maps → Terrain STL (with roads)
+# TOPO2STL — Topographic Maps → Terrain STL
 
-Generate printable terrain STL files from a drawn polygon or uploaded shapefile.
-Optionally fetch OpenStreetMap road centerlines and carve them into the terrain.
-
-## Features
+Draw or upload an area, pull a DEM (with optional OpenStreetMap roads), and export a
+3D-printable terrain STL. Runs locally.
 
 - Draw a polygon on a Leaflet map, or upload a zipped shapefile
 - Download terrain-only **STL**
-- Download a **ZIP bundle** containing:
-  - raw terrain STL
-  - carved terrain STL (roads recessed)
-  - roads centerlines GeoJSON
-- Road classes: `motorway`, `trunk`, `primary`, `secondary`, `tertiary`, `residential`
-- Per-road-class carve width + depth controls
+- Download a **ZIP bundle**: raw terrain STL + carved terrain STL (roads recessed) + roads GeoJSON
+- Road classes `motorway · trunk · primary · secondary · tertiary · residential`, each with a
+  per-class carve width + depth (mm)
+
+## Stack
+
+- **Backend:** FastAPI (Python) — `backend/`
+- **Frontend:** React + Vite — `frontend/`
+- **Data source:** OpenTopography DEMs + OSM roads (Overpass)
 
 ## Requirements
 
-- Python 3.10+ (Windows, macOS, or Linux)
-- An **OpenTopography API key**
+- Python 3.10+
+- Node.js 18+ (for the React frontend)
+- A free **OpenTopography API key** → https://portal.opentopography.org/
 
-## Setup
+## Configure your API key
 
-### 1) Configure your OpenTopography API key
+Copy `.env.example` to `.env` (gitignored) and set your key:
 
-Set an environment variable:
+```
+OPEN_TOPO_API_KEY=your_key_here
+```
 
-- `OPEN_TOPO_API_KEY=<your_key>`
+## Quick start (Windows)
 
-Or create a local file at the repo root:
+```
+startup.bat
+```
 
-- `API_KEY.txt`
+It creates `.venv`, installs backend deps, builds the frontend, and serves the app at
+http://127.0.0.1:8000.
 
+## Manual setup
 
-### 2) Install Python dependencies
-
-Create and activate a virtualenv, then install requirements:
+**Backend**
 
 ```bash
 python -m venv .venv
-# Windows
-.\.venv\Scripts\activate
-# macOS/Linux
-# source .venv/bin/activate
-
-pip install -r WEBAPP/requirements.txt
+. .venv/Scripts/activate            # Windows;  source .venv/bin/activate on macOS/Linux
+pip install -r backend/requirements.txt
+python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000
 ```
 
-### 3) Run the server
+**Frontend — development** (hot reload, proxies `/api` to the backend on :8000)
 
 ```bash
-python -m uvicorn WEBAPP.main:app --reload --host 127.0.0.1 --port 8000
+cd frontend
+npm install
+npm run dev            # http://localhost:5173
 ```
 
-Open:
+**Frontend — build** (FastAPI then serves it at `/`)
 
-- http://127.0.0.1:8000
+```bash
+cd frontend
+npm run build          # outputs frontend/dist, served by the backend at http://127.0.0.1:8000
+```
 
-## Windows quick start
+## Health check
 
-You can also use:
-
-- `startup.bat`
-
-It creates `.venv`, installs requirements, loads `API_KEY.txt` into `OPEN_TOPO_API_KEY` (if set), and starts the server.
-
-## Notes / troubleshooting
-
-- Installing `geopandas` / `rasterio` on Windows can be the hardest part.
-  If `pip install` fails, consider using **conda-forge** for geospatial deps.
-- Road fetches use the public Overpass API and may occasionally be slow or rate-limited.
+```bash
+python verify.py       # backend format/lint/tests + frontend build/lint
+```
 
 ## Repo layout
 
-- `WEBAPP/` – FastAPI backend + static frontend
-- `WEBAPP/static/` – UI assets (Leaflet app)
-- `openapi.json` – API schema snapshot
+```
+backend/     FastAPI app — main.py, api/ (routers), core/ (DEM/roads/mesh/pipeline),
+             models/ (pydantic), constants.py, config.py, tests/
+frontend/    React + Vite app (Leaflet map, controls)
+data/        input/reference datasets (DATA_SOURCES.md logs provenance)
+project-management/   living plan, feature register, decisions, chores, reports
+.claude/     tier + rules + hooks + commands (see GUIDE.md)
+```
+
+See `GUIDE.md` for how the project is run day to day.
+
+## Notes / troubleshooting
+
+- Installing `geopandas` / `rasterio` on Windows can be the hardest part. If `pip install`
+  fails, use **conda-forge** for the geospatial stack.
+- Road fetches use the public Overpass API and may occasionally be slow or rate-limited.
 
 ## License
 
-Add a license file (MIT, Apache-2.0, etc.) if you plan to share publicly.
-
+Add a license file (MIT, Apache-2.0, …) if you plan to share publicly.

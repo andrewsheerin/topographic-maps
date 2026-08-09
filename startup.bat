@@ -3,34 +3,39 @@ setlocal enabledelayedexpansion
 
 echo Starting Terrain STL Generator...
 
-:: Create venv if needed (don't delete it every time)
+:: 1) Python backend environment
 if not exist .venv (
   echo Creating virtual environment...
   py -m venv .venv
 )
-
-echo Activating environment...
 call .venv\Scripts\activate.bat
 
-echo Installing requirements...
+echo Installing backend requirements...
 python -m pip install --upgrade pip >nul
-pip install -r WEBAPP\requirements.txt
+pip install -r backend\requirements.txt
 
-:: Load API key from API_KEY.txt if env var not already set
-if "!OPEN_TOPO_API_KEY!"=="" (
-  if exist API_KEY.txt (
-    set /p OPEN_TOPO_API_KEY=<API_KEY.txt
-  )
+:: 2) Build the React frontend so FastAPI can serve it at /
+where npm >nul 2>nul
+if %ERRORLEVEL%==0 (
+  echo Building frontend...
+  pushd frontend
+  call npm install
+  call npm run build
+  popd
+) else (
+  echo WARNING: npm not found; skipping frontend build.
+  echo   Install Node.js, then run:  cd frontend ^&^& npm install ^&^& npm run build
 )
 
-if "!OPEN_TOPO_API_KEY!"=="" (
-  echo WARNING: Missing OpenTopography API key.
-  echo   Set OPEN_TOPO_API_KEY, or create API_KEY.txt at the repo root.
+:: 3) API key check
+if not exist .env (
+  echo WARNING: No .env found. Copy .env.example to .env and set OPEN_TOPO_API_KEY.
   echo   STL generation will fail until this is configured.
 )
 
-echo Starting Uvicorn server...
-python -m uvicorn WEBAPP.main:app --reload --host 127.0.0.1 --port 8000
+:: 4) Run the server (serves the built frontend at http://127.0.0.1:8000)
+echo Starting server on http://127.0.0.1:8000 ...
+python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000
 
 echo Server stopped.
 pause
