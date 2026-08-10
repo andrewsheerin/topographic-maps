@@ -9,11 +9,13 @@ from fastapi.staticfiles import StaticFiles
 
 from api.roads import router as roads_router
 from api.terrain import router as terrain_router
+from api.upload import router as upload_router
 
 app = FastAPI(title="TOPO2STL")
 
 app.include_router(roads_router)
 app.include_router(terrain_router)
+app.include_router(upload_router)
 
 # Serve the built React frontend at / when it exists (the local "just run it"
 # path). In development, run the Vite dev server instead — it proxies /api here.

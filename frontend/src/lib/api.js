@@ -69,8 +69,8 @@ export async function generateBundle(body) {
 
 /**
  * POST /api/upload-shapefile (multipart) -> polygon GeoJSON geometry.
- * NOTE: this endpoint is currently not implemented on the backend; on failure
- * the caller surfaces the error in the status line (faithful to the original).
+ * Backend extracts the zipped shapefile, reprojects to WGS84, and returns a
+ * single polygon. On failure the caller surfaces `detail` in the status line.
  */
 export async function uploadShapefile(file) {
   const formData = new FormData();
