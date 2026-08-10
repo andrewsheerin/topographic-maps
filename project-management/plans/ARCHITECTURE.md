@@ -8,8 +8,8 @@ Single-user local app, two processes in development, one in "just run it" mode.
 
 - **Frontend** (React + Vite) renders a Leaflet map + control panel. It calls the backend over
   relative `/api/*` paths. In dev, the Vite server (`:5173`) proxies `/api` to the backend
-  (`:8000`); for local use, `npm run build` emits `frontend/dist`, which the backend serves at `/`.
-- **Backend** (FastAPI, `:8000`) exposes three endpoints and orchestrates the pipeline. It holds no
+  (`:8020`); for local use, `npm run build` emits `frontend/dist`, which the backend serves at `/`.
+- **Backend** (FastAPI, `:8020`) exposes three endpoints and orchestrates the pipeline. It holds no
   state; each request writes to a fresh temp directory.
 - **External services:** OpenTopography (DEM GeoTIFFs) and OpenStreetMap via Overpass (road
   centerlines). The OpenTopography API key is the only secret, loaded from a gitignored `.env`.

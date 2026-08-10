@@ -33,9 +33,9 @@ if not exist .env (
   echo   STL generation will fail until this is configured.
 )
 
-:: 4) Run the server (serves the built frontend at http://127.0.0.1:8000)
-echo Starting server on http://127.0.0.1:8000 ...
-python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000
+:: 4) Run the server (serves the built frontend at http://127.0.0.1:8020)
+echo Starting server on http://127.0.0.1:8020 ...
+python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8020
 
 echo Server stopped.
 pause

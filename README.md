@@ -36,7 +36,7 @@ startup.bat
 ```
 
 It creates `.venv`, installs backend deps, builds the frontend, and serves the app at
-http://127.0.0.1:8000.
+http://127.0.0.1:8020.
 
 ## Manual setup
 
@@ -46,10 +46,10 @@ http://127.0.0.1:8000.
 python -m venv .venv
 . .venv/Scripts/activate            # Windows;  source .venv/bin/activate on macOS/Linux
 pip install -r backend/requirements.txt
-python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8000
+python -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8020
 ```
 
-**Frontend — development** (hot reload, proxies `/api` to the backend on :8000)
+**Frontend — development** (hot reload, proxies `/api` to the backend on :8020)
 
 ```bash
 cd frontend
@@ -61,7 +61,7 @@ npm run dev            # http://localhost:5173
 
 ```bash
 cd frontend
-npm run build          # outputs frontend/dist, served by the backend at http://127.0.0.1:8000
+npm run build          # outputs frontend/dist, served by the backend at http://127.0.0.1:8020
 ```
 
 ## Health check
