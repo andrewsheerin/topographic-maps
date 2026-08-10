@@ -1,11 +1,43 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet-draw';
+import '../../lib/leafletDrawFix.js';
 
 import styles from './MapView.module.css';
 
 function clamp(num, min, max) {
   return Math.max(min, Math.min(max, num));
+}
+
+// Approximate a drawn circle (centre + radius in metres) as a polygon Feature.
+// The DEM pipeline needs a polygon; a circle's toGeoJSON() is only a point with
+// a radius property, which shapely can't use as an area.
+function circleToPolygonFeature(circle, steps = 64) {
+  const center = circle.getLatLng();
+  const radiusM = circle.getRadius();
+  const latRad = (center.lat * Math.PI) / 180;
+  const dLat = radiusM / 111320; // metres -> degrees latitude
+  const dLng = radiusM / (111320 * Math.cos(latRad)); // metres -> degrees longitude
+  const ring = [];
+  for (let i = 0; i <= steps; i++) {
+    const theta = (i / steps) * 2 * Math.PI;
+    ring.push([
+      center.lng + dLng * Math.cos(theta),
+      center.lat + dLat * Math.sin(theta),
+    ]);
+  }
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'Polygon', coordinates: [ring] },
+  };
+}
+
+// A drawn shape -> the polygon GeoJSON Feature the backend expects.
+function shapeToPolygonFeature(layer) {
+  return layer instanceof L.Circle
+    ? circleToPolygonFeature(layer)
+    : layer.toGeoJSON();
 }
 
 /**
@@ -124,13 +156,20 @@ export default function MapView({
 
     const drawControl = new L.Control.Draw({
       draw: {
+        // Squares are drawn with the rectangle tool.
         polygon: {
           allowIntersection: false,
           showArea: true,
         },
+        rectangle: {
+          showArea: true,
+          metric: true,
+        },
+        circle: {
+          showRadius: true,
+          metric: true,
+        },
         polyline: false,
-        rectangle: false,
-        circle: false,
         marker: false,
         circlemarker: false,
       },
@@ -143,7 +182,7 @@ export default function MapView({
     map.on(L.Draw.Event.CREATED, (event) => {
       drawnItems.clearLayers();
       drawnItems.addLayer(event.layer);
-      const feature = event.layer.toGeoJSON();
+      const feature = shapeToPolygonFeature(event.layer);
       lastSyncedRef.current = feature;
       cbRef.current.onPolygonCreated(feature);
     });
@@ -151,7 +190,7 @@ export default function MapView({
     map.on(L.Draw.Event.EDITED, () => {
       const layers = drawnItems.getLayers();
       if (layers.length > 0) {
-        const feature = layers[0].toGeoJSON();
+        const feature = shapeToPolygonFeature(layers[0]);
         lastSyncedRef.current = feature;
         cbRef.current.onPolygonEdited(feature);
       }

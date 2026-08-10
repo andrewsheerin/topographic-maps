@@ -135,7 +135,7 @@ export default function Generator() {
 
   const handleLoadRoads = useCallback(async () => {
     if (!polygon) {
-      setStatus('Draw a polygon or upload a shapefile first.');
+      setStatus('Draw a shape or upload a shapefile first.');
       return;
     }
     if (selectedRoadLevels.length === 0) {
@@ -164,7 +164,7 @@ export default function Generator() {
 
   const handleGenerateStl = useCallback(async () => {
     if (!polygon) {
-      setStatus('Draw a polygon or upload a shapefile first.');
+      setStatus('Draw a shape or upload a shapefile first.');
       return;
     }
     setStatus('Generating STL...');
@@ -182,7 +182,7 @@ export default function Generator() {
 
   const handleGenerateBundle = useCallback(async () => {
     if (!polygon) {
-      setStatus('Draw a polygon or upload a shapefile first.');
+      setStatus('Draw a shape or upload a shapefile first.');
       return;
     }
     setStatus('Generating bundle (this may take a while)...');

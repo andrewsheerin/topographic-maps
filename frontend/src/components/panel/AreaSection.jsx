@@ -13,7 +13,8 @@ export default function AreaSection({ onUpload, onClearPolygon }) {
     <section>
       <h2>1. Area</h2>
       <p className={styles.hint}>
-        Draw a polygon on the map or upload a zipped shapefile.
+        Draw a polygon, rectangle, or circle on the map (use the tools top-left),
+        or upload a zipped shapefile. Rectangles can be dragged square.
       </p>
 
       <label className={styles.file}>
