@@ -14,6 +14,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-5 | Tests for mesh scale + carve against a user-verified worked example | test | B | PLANNED | | Science-integrity requires calc tests; extend the two existing carve tests. |
 | F-6 | In-browser 3D preview of the generated mesh | idea | later | IDEA | | Would remove the download-to-inspect loop. |
 | F-7 | Surface more DEM datasets in the UI (COP30/SRTM/NASADEM/AW3D30) | idea | later | IDEA | | Already wired in `DATASET_ALIASES`; just not in the dropdown. |
+| F-10 | Vectorize `dem_to_mesh` face construction | idea | later | IDEA | | Nested Python loop over the grid; O(h·w) — slow at low downsample on large areas. Ignore until visibly slow (L1). |
 | F-8 | Polygon drawing aborts at the 3rd vertex | bug | C | DONE | acb749d | Leaflet.draw 1.0.4 `readableArea` assigns an undeclared `type` → ESM strict-mode throw. Patched in `lib/leafletDrawFix.js`. |
 | F-9 | Add rectangle + circle draw tools (circle → polygon for DEM) | feature | C | DONE | acb749d | Squares via the rectangle tool; circle → 64-gon polygon. |
 

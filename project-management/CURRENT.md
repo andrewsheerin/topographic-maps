@@ -1,18 +1,20 @@
 # Current
 
-**Phase:** C — feature growth
-**Register item:** — (F-3 DONE @ e3efa84)
-**Status:** Shapefile upload implemented + verified
+**Phase:** C — feature growth (between sessions)
+**Register item:** — (last: F-3 DONE @ e3efa84)
+**Status:** Idle. Migration + shape drawing + shapefile upload all DONE; verify green.
 
 ## Right now
-Nothing in progress. On branch `feat/F3-shapefile-upload` (stacks on the earlier branches).
+Nothing in progress. App runnable at :8020 (built) / :5173 (dev).
 
 ## Blocked on
-Nothing. Chore C-1 (rotate leaked API key) still the user's.
+Nothing blocking. Yours: C-1 (rotate API key), D-1 / D-2 (open decisions), and merging the
+stacked branches to `main`.
 
 ## Next
-User to try uploading a zipped shapefile in the browser + merge the stacked branches.
-Open for later: D-1/D-2 (Phase B correctness), F-7 (more DEM datasets in the dropdown).
+Merge `feat/F3-shapefile-upload` → `main`, then either Phase B correctness (D-1/D-2 → F-2, F-4, F-5)
+or more features (F-7 DEM datasets, F-6 3D preview). See the latest session report for the
+opening prompt.
 
 ---
 *Under 20 lines. Detail belongs in the register. Reset at the end of each session.*
