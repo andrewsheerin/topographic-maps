@@ -1,19 +1,55 @@
-"""Read an uploaded zipped shapefile into a single WGS84 polygon geometry.
+"""Read an uploaded boundary file (zipped shapefile or GeoJSON) into a single
+WGS84 polygon geometry.
 
 The DEM pipeline works in WGS84 (EPSG:4326) and needs one polygon area. Per
 science-integrity, CRS is never assumed: a shapefile without a .prj is rejected,
-not guessed."""
+not guessed. GeoJSON is WGS84 by spec (RFC 7946); a legacy `crs` member naming
+anything else is rejected."""
 
 import glob
+import json
 import os
 import tempfile
 import zipfile
 
 import geopandas as gpd
-from shapely.geometry import mapping
+from shapely.geometry import mapping, shape
 from shapely.ops import unary_union
 
 WGS84 = 4326
+
+# Legacy (pre-RFC 7946) GeoJSON `crs` names that still mean WGS84 lon/lat.
+_WGS84_CRS_NAMES = {
+    "urn:ogc:def:crs:OGC:1.3:CRS84",
+    "urn:ogc:def:crs:OGC::CRS84",
+    "urn:ogc:def:crs:EPSG::4326",
+    "EPSG:4326",
+}
+
+
+def _to_single_polygon(geoms: list) -> dict:
+    """Union geometries and reduce to one polygon GeoJSON geometry dict.
+    Raises ValueError when no polygon area can be derived."""
+    geoms = [g for g in geoms if g is not None and not g.is_empty]
+    if not geoms:
+        raise ValueError("The file has no usable geometry.")
+
+    union = unary_union(geoms)
+    if union.geom_type == "Polygon":
+        poly = union
+    elif union.geom_type in ("MultiPolygon", "GeometryCollection"):
+        # A multi-part upload is reduced to its convex hull so the pipeline has a
+        # single contiguous area to extract.
+        poly = union.convex_hull
+    else:
+        raise ValueError(
+            f"The geometry is {union.geom_type}; a polygon area is required."
+        )
+
+    if poly.is_empty or poly.geom_type != "Polygon":
+        raise ValueError("Could not derive a polygon area from the file.")
+
+    return mapping(poly)
 
 
 def polygon_geojson_from_zip(zip_path: str) -> dict:
@@ -41,23 +77,49 @@ def polygon_geojson_from_zip(zip_path: str) -> dict:
         )
 
     gdf = gdf.to_crs(WGS84)
-    geoms = [g for g in gdf.geometry if g is not None and not g.is_empty]
-    if not geoms:
-        raise ValueError("The shapefile has no usable geometry.")
+    return _to_single_polygon(list(gdf.geometry))
 
-    union = unary_union(geoms)
-    if union.geom_type == "Polygon":
-        poly = union
-    elif union.geom_type in ("MultiPolygon", "GeometryCollection"):
-        # A multi-part upload is reduced to its convex hull so the pipeline has a
-        # single contiguous area to extract.
-        poly = union.convex_hull
-    else:
-        raise ValueError(
-            f"The shapefile geometry is {union.geom_type}; a polygon area is required."
+
+def polygon_geojson_from_geojson(text: str) -> dict:
+    """Parse GeoJSON (FeatureCollection, Feature, or bare geometry) and return
+    one WGS84 polygon as a GeoJSON geometry dict. Raises ValueError on bad
+    input; the caller maps that to HTTP 400."""
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        raise ValueError("The upload is not valid JSON.")
+    if not isinstance(data, dict) or "type" not in data:
+        raise ValueError("The upload is not valid GeoJSON (no `type` member).")
+
+    # RFC 7946 GeoJSON is always WGS84. A legacy `crs` member naming another
+    # system means the coordinates aren't lon/lat — reject rather than assume.
+    crs = data.get("crs")
+    if crs is not None:
+        name = (
+            str((crs.get("properties") or {}).get("name", ""))
+            if isinstance(crs, dict)
+            else str(crs)
         )
+        if name not in _WGS84_CRS_NAMES:
+            raise ValueError(
+                f"The GeoJSON declares CRS {name or crs!r}; reproject to WGS84 "
+                "(EPSG:4326) before uploading."
+            )
 
-    if poly.is_empty or poly.geom_type != "Polygon":
-        raise ValueError("Could not derive a polygon area from the shapefile.")
+    if data["type"] == "FeatureCollection":
+        geometries = [f.get("geometry") for f in data.get("features", [])]
+    elif data["type"] == "Feature":
+        geometries = [data.get("geometry")]
+    else:
+        geometries = [data]
 
-    return mapping(poly)
+    geoms = []
+    for g in geometries:
+        if not g:
+            continue
+        try:
+            geoms.append(shape(g))
+        except (ValueError, KeyError, TypeError, AttributeError):
+            raise ValueError("The GeoJSON contains an invalid geometry.")
+
+    return _to_single_polygon(geoms)

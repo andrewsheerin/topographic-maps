@@ -17,6 +17,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-10 | Vectorize `dem_to_mesh` face construction | idea | later | IDEA | | Nested Python loop over the grid; O(h·w) — slow at low downsample on large areas. Ignore until visibly slow (L1). |
 | F-8 | Polygon drawing aborts at the 3rd vertex | bug | C | DONE | acb749d | Leaflet.draw 1.0.4 `readableArea` assigns an undeclared `type` → ESM strict-mode throw. Patched in `lib/leafletDrawFix.js`. |
 | F-9 | Add rectangle + circle draw tools (circle → polygon for DEM) | feature | C | DONE | acb749d | Squares via the rectangle tool; circle → 64-gon polygon. |
+| F-11 | Area step redesign: 3 modes — upload (shp zip + GeoJSON), draw, TIGER city/town picker | feature | C | WIP | | TIGER approach mirrored from swpt-app. GeoJSON upload is new; picker fetches place boundary as polygon. |
 
 ## Dropped
 

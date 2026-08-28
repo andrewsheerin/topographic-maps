@@ -1,6 +1,7 @@
-"""Tests for the shapefile -> WGS84 polygon transformation. Self-contained:
-builds a shapefile on the fly and zips it; no network."""
+"""Tests for the boundary-file -> WGS84 polygon transformations. Self-contained:
+builds shapefiles/GeoJSON on the fly; no network."""
 
+import json
 import os
 import tempfile
 import zipfile
@@ -9,7 +10,7 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import Polygon, shape
 
-from core.shapefile import polygon_geojson_from_zip
+from core.shapefile import polygon_geojson_from_geojson, polygon_geojson_from_zip
 
 
 def _write_zip(gdf, tmp, drop_prj=False):
@@ -52,3 +53,53 @@ def test_missing_crs_raises():
 
     with pytest.raises(ValueError):
         polygon_geojson_from_zip(zip_path)
+
+
+SQUARE = {
+    "type": "Polygon",
+    "coordinates": [
+        [[-71.5, 41.5], [-71.4, 41.5], [-71.4, 41.6], [-71.5, 41.6], [-71.5, 41.5]]
+    ],
+}
+
+
+def test_geojson_feature_collection():
+    fc = {
+        "type": "FeatureCollection",
+        "features": [{"type": "Feature", "properties": {}, "geometry": SQUARE}],
+    }
+    geom = polygon_geojson_from_geojson(json.dumps(fc))
+    assert geom["type"] == "Polygon"
+    assert shape(geom).equals(shape(SQUARE))
+
+
+def test_geojson_bare_geometry():
+    geom = polygon_geojson_from_geojson(json.dumps(SQUARE))
+    assert shape(geom).equals(shape(SQUARE))
+
+
+def test_geojson_multipolygon_reduces_to_convex_hull():
+    multi = {
+        "type": "MultiPolygon",
+        "coordinates": [
+            [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+            [[[2, 2], [3, 2], [3, 3], [2, 3], [2, 2]]],
+        ],
+    }
+    geom = polygon_geojson_from_geojson(json.dumps(multi))
+    assert geom["type"] == "Polygon"
+    assert shape(geom).contains(shape(multi))
+
+
+def test_geojson_foreign_crs_rejected():
+    data = {
+        **SQUARE,
+        "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::32619"}},
+    }
+    with pytest.raises(ValueError, match="WGS84"):
+        polygon_geojson_from_geojson(json.dumps(data))
+
+
+def test_geojson_invalid_json_rejected():
+    with pytest.raises(ValueError, match="JSON"):
+        polygon_geojson_from_geojson("not json {")
