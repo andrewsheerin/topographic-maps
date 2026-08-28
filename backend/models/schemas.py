@@ -28,7 +28,6 @@ class GenerateRequest(BaseModel):
     dem_dataset: str
     downsample: int
     z_scale: float
-    buffer_m: float
     target_max_mm: float
     add_base: bool
     base_thickness_mm: float  # print millimetres (F-17; was real-world metres)

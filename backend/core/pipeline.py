@@ -19,24 +19,26 @@ from core.geometry import utm_epsg_from_lon_lat
 METERS_TO_MM = constants.METERS_TO_MM
 
 
-def _prepare_dem(polygon_wgs84, dem_dataset, buffer_m, downsample, tmp):
-    """Shared DEM prep: download -> clip -> reproject to UTM -> buffer+clip ->
-    read. Returns (dem_arr, px_m, transform, epsg, poly_utm, scale_xy) given a
-    later target size, so callers compute scale from real-world extent."""
+def _prepare_dem(polygon_wgs84, dem_dataset, downsample, tmp):
+    """Shared DEM prep: download -> clip -> reproject to UTM -> re-clip -> read.
+    Returns (dem_arr, px_m, transform, epsg, poly_utm) so callers compute scale
+    from real-world extent."""
     lon, lat = polygon_wgs84.centroid.coords[0]
     epsg = utm_epsg_from_lon_lat(lon, lat)
 
     dem = os.path.join(tmp, "dem.tif")
     dem2 = os.path.join(tmp, "dem_clip_wgs84.tif")
     dem3 = os.path.join(tmp, "dem_utm.tif")
-    dem4 = os.path.join(tmp, "dem_utm_clip_buffer.tif")
+    dem4 = os.path.join(tmp, "dem_utm_clip.tif")
 
     dem_mod.download_dem(*polygon_wgs84.bounds, dem, dem_dataset)
     dem_mod.clip_dem_by_polygon(dem, polygon_wgs84, "EPSG:4326", dem2)
     dem_mod.reproject_dem(dem2, dem3, epsg)
 
     poly_utm = gpd.GeoSeries([polygon_wgs84], crs="EPSG:4326").to_crs(epsg).iloc[0]
-    poly_utm = poly_utm.buffer(float(buffer_m) if buffer_m else 0.0)
+    # buffer(0) adds no margin (F-18 removed the user-facing buffer) — it only
+    # normalizes any invalidity introduced by reprojection.
+    poly_utm = poly_utm.buffer(0.0)
 
     dem_mod.clip_dem_by_polygon(dem3, poly_utm, epsg, dem4)
 
@@ -66,14 +68,13 @@ def generate_stl_from_polygon(
     dem_dataset,
     downsample,
     z_scale,
-    buffer_m,
     target_max_mm,
     add_base_flag,
     base_thickness_mm,
 ):
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
-        polygon_wgs84, dem_dataset, buffer_m, downsample, tmp
+        polygon_wgs84, dem_dataset, downsample, tmp
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 
@@ -92,7 +93,6 @@ def generate_bundle_from_polygon(
     dem_dataset,
     downsample,
     z_scale,
-    buffer_m,
     target_max_mm,
     add_base_flag,
     base_thickness_mm,
@@ -101,7 +101,7 @@ def generate_bundle_from_polygon(
 ):
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
-        polygon_wgs84, dem_dataset, buffer_m, downsample, tmp
+        polygon_wgs84, dem_dataset, downsample, tmp
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 

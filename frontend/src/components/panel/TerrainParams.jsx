@@ -38,15 +38,6 @@ export default function TerrainParams({ terrain, onChange }) {
         />
       </Field>
 
-      <Field label="Buffer distance (meters)" htmlFor="bufferM">
-        <input
-          id="bufferM"
-          type="number"
-          value={terrain.bufferM}
-          onChange={(e) => onChange('bufferM', e.target.value)}
-        />
-      </Field>
-
       <Field label="Target max size (mm)" htmlFor="targetMaxMm">
         <input
           id="targetMaxMm"

@@ -24,7 +24,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-15 | Place picker shows the full result list — remove limit/offset pagination and "Show more" | fix | C | DONE | 49e14d3 | WI = 1913 rows in one scrollable list. |
 | F-16 | STL not watertight: `add_base` concatenated two open sheets (no walls, no inverted bottom) → slicers drop regions | bug | C | DONE | 161b31a | Symptom: half of RI missing at slice time. Now a sealed manifold (Euler 2, outward normals, exact slab volume verified); non-watertight export refused. |
 | F-17 | Base thickness in print millimetres (was real-world metres) — consistent with the page's other units | fix | C | DONE | 9d4f298 | User-directed unit change. Old 50 m default gave paper-thin bases at state scale (0.13 mm for RI). UI default 2 mm — user to confirm. |
-| F-18 | Remove the buffer-distance parameter? | idea | C | IDEA | | Recommended for removal: contradicts land-clipped boundaries, and DEM download never fetched beyond the bbox anyway. Awaiting user call. |
+| F-18 | Remove the buffer-distance parameter | fix | C | DONE | (this) | User approved. Field, API param, and pipeline buffer dropped; buffer(0) kept solely as validity normalization after reprojection. |
 
 ## Dropped
 
