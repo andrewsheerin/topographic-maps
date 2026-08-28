@@ -17,8 +17,8 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-10 | Vectorize `dem_to_mesh` face construction | idea | later | IDEA | | Nested Python loop over the grid; O(h·w) — slow at low downsample on large areas. Ignore until visibly slow (L1). |
 | F-8 | Polygon drawing aborts at the 3rd vertex | bug | C | DONE | acb749d | Leaflet.draw 1.0.4 `readableArea` assigns an undeclared `type` → ESM strict-mode throw. Patched in `lib/leafletDrawFix.js`. |
 | F-9 | Add rectangle + circle draw tools (circle → polygon for DEM) | feature | C | DONE | acb749d | Squares via the rectangle tool; circle → 64-gon polygon. |
-| F-11 | Area step redesign: 3 modes — upload (shp zip + GeoJSON), draw, TIGER city/town picker | feature | C | DONE | 3666b87, (this) | TIGER county subdivisions, mirrored from swpt-app F-79. Tests 17/17; smoke-tested on real RI/MA data; browser click-through pending user run. |
-| F-12 | Hooks in `.claude/settings.json` used cwd-relative paths — one `cd backend` wedged the whole session | bug | C | DONE | (this) | Both hook commands now absolute paths (user-approved). Takes full effect next session. |
+| F-11 | Area step redesign: 3 modes — upload (shp zip + GeoJSON), draw, TIGER city/town picker | feature | C | DONE | 3666b87, 3456f64 | TIGER county subdivisions, mirrored from swpt-app F-79. Tests 17/17; smoke-tested on real RI/MA data; browser click-through pending user run. |
+| F-12 | Hooks in `.claude/settings.json` used cwd-relative paths — one `cd backend` wedged the whole session | bug | C | DONE | 1639a57 | Both hook commands now absolute paths (user-approved). Takes full effect next session. |
 
 ## Dropped
 
