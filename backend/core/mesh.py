@@ -100,11 +100,17 @@ def carve_roads(dem, transform, gdf, scale_xy, z_scale, road_etch=None):
 
 
 def dem_to_mesh(dem, px_m, scale_xy, z_scale):
-    """Convert a DEM (metres) to a triangular mesh in millimetres.
+    """Convert a DEM (metres) to a triangular surface mesh in millimetres,
+    cropped to the finite (in-boundary) cells.
 
     X/Y are scaled to the requested print size; Z is relief-only (min elevation
     -> 0) using the same mm-per-metre factor as X/Y so aspect ratio is
-    preserved, times `z_scale` vertical exaggeration."""
+    preserved, times `z_scale` vertical exaggeration.
+
+    Cells with any nodata corner are dropped (F-19): the mesh takes the shape
+    of the selected area — a state print is state-shaped, islands become
+    separate patches, and nodata gaps inside the DEM stay visible as holes
+    (never silently filled). `add_base` later seals every open boundary."""
     h, w = dem.shape
 
     # Reverse X so east is to the right in the exported STL regardless of the
@@ -119,7 +125,7 @@ def dem_to_mesh(dem, px_m, scale_xy, z_scale):
 
     z0 = float(np.nanmin(dem[finite]))
     dem_rel = dem - z0
-    dem_rel[~finite] = 0.0
+    dem_rel[~finite] = 0.0  # placeholder; these vertices are dropped below
 
     # Guard against unit/CRS mistakes producing absurd relief.
     relief_m = float(np.nanmax(dem_rel))
@@ -139,13 +145,21 @@ def dem_to_mesh(dem, px_m, scale_xy, z_scale):
 
     vertices = np.column_stack([xv.ravel(), yv.ravel(), z.ravel()])
 
-    # Two triangles per grid cell, built vectorized (F-10): the Python loop was
-    # O(h*w) interpreter work and dominated generation time on large areas.
+    # Two triangles per grid cell, vectorized (F-10), keeping only cells whose
+    # four corners are all finite (F-19).
     idx = np.arange(h * w).reshape(h, w)
-    tl = idx[:-1, :-1].ravel()
-    tr = idx[:-1, 1:].ravel()
-    bl = idx[1:, :-1].ravel()
-    br = idx[1:, 1:].ravel()
+    cell_ok = (
+        finite[:-1, :-1] & finite[:-1, 1:] & finite[1:, :-1] & finite[1:, 1:]
+    ).ravel()
+    if not cell_ok.any():
+        raise RuntimeError(
+            "No complete grid cells inside the area — the area is too small for "
+            "this DEM resolution; reduce downsample or pick a larger area."
+        )
+    tl = idx[:-1, :-1].ravel()[cell_ok]
+    tr = idx[:-1, 1:].ravel()[cell_ok]
+    bl = idx[1:, :-1].ravel()[cell_ok]
+    br = idx[1:, 1:].ravel()[cell_ok]
     faces = np.concatenate(
         [
             np.column_stack([tl, tr, bl]),
@@ -153,7 +167,9 @@ def dem_to_mesh(dem, px_m, scale_xy, z_scale):
         ]
     )
 
-    return trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
+    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
+    mesh.remove_unreferenced_vertices()
+    return mesh
 
 
 def add_base(surface, thickness_mm):

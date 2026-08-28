@@ -29,8 +29,7 @@ class GenerateRequest(BaseModel):
     downsample: int
     z_scale: float
     target_max_mm: float
-    add_base: bool
-    base_thickness_mm: float  # print millimetres (F-17; was real-world metres)
+    base_thickness_mm: float  # print millimetres (F-17); STL is always sealed (F-19)
     road_levels: list[str] = []
     road_etch: RoadEtchParams = RoadEtchParams()
 

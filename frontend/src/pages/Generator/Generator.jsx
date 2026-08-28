@@ -22,7 +22,6 @@ const DEFAULT_TERRAIN = {
   downsample: '1',
   zScale: '2.0',
   targetMaxMm: '200',
-  addBase: true,
   baseThicknessMm: '2',
 };
 
@@ -87,8 +86,7 @@ export default function Generator() {
       downsample: Number(terrain.downsample || 1),
       z_scale: Number(terrain.zScale || 1.0),
       target_max_mm: Number(terrain.targetMaxMm || 200),
-      add_base: Boolean(terrain.addBase),
-      base_thickness_mm: Number(terrain.baseThicknessMm || 0),
+      base_thickness_mm: Number(terrain.baseThicknessMm || 2),
       road_levels: selectedRoadLevels,
       road_etch,
     };

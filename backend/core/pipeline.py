@@ -69,7 +69,6 @@ def generate_stl_from_polygon(
     downsample,
     z_scale,
     target_max_mm,
-    add_base_flag,
     base_thickness_mm,
 ):
     tmp = tempfile.mkdtemp()
@@ -78,10 +77,10 @@ def generate_stl_from_polygon(
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 
+    # The STL is always a sealed solid (F-19) — an open surface can't be
+    # sliced. base_thickness_mm is a print dimension (F-17), like road etch.
     mesh = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
-    if add_base_flag:
-        # base_thickness_mm is a print dimension (F-17), like road widths/depths.
-        mesh = mesh_mod.add_base(mesh, float(base_thickness_mm))
+    mesh = mesh_mod.add_base(mesh, float(base_thickness_mm))
 
     out = os.path.join(tmp, "terrain.stl")
     mesh.export(out)
@@ -94,7 +93,6 @@ def generate_bundle_from_polygon(
     downsample,
     z_scale,
     target_max_mm,
-    add_base_flag,
     base_thickness_mm,
     road_levels,
     road_etch=None,
@@ -123,8 +121,7 @@ def generate_bundle_from_polygon(
 
     # Raw mesh.
     raw_mesh = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
-    if add_base_flag:
-        raw_mesh = mesh_mod.add_base(raw_mesh, float(base_thickness_mm))
+    raw_mesh = mesh_mod.add_base(raw_mesh, float(base_thickness_mm))
     raw_stl = os.path.join(tmp, "terrain_raw.stl")
     raw_mesh.export(raw_stl)
 
@@ -133,8 +130,7 @@ def generate_bundle_from_polygon(
         dem_arr, transform, gdf_roads_utm, scale_xy, z_scale, road_etch=road_etch
     )
     carved_mesh = mesh_mod.dem_to_mesh(carved_dem, px_m, scale_xy, z_scale)
-    if add_base_flag:
-        carved_mesh = mesh_mod.add_base(carved_mesh, float(base_thickness_mm))
+    carved_mesh = mesh_mod.add_base(carved_mesh, float(base_thickness_mm))
     carved_stl = os.path.join(tmp, "terrain_with_roads_recess.stl")
     carved_mesh.export(carved_stl)
 

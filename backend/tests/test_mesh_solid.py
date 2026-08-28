@@ -30,10 +30,9 @@ def test_flat_dem_seals_to_watertight_slab():
     assert solid.volume == pytest.approx(x_mm * y_mm * 2.0, rel=1e-6)
 
 
-def test_terrain_with_nodata_regions_seals_watertight():
-    # Mixed terrain with NaN regions (outside a multi-part boundary), like a
-    # state outline over water: NaN flattens to the base plane but the solid
-    # must still close.
+def test_terrain_with_nodata_regions_crops_and_seals():
+    # Terrain with NaN regions (water outside the boundary), like a state
+    # outline: the mesh is cropped to the finite area (F-19) and still seals.
     rng = np.random.default_rng(42)
     dem = rng.uniform(0.0, 500.0, size=(20, 30)).astype(np.float32)
     dem[:8, 12:] = np.nan  # a bay
@@ -43,6 +42,24 @@ def test_terrain_with_nodata_regions_seals_watertight():
     assert solid.is_watertight
     assert solid.is_winding_consistent
     assert solid.euler_number == 2
+    assert solid.volume > 0
+    # Cropped: fewer vertices than the full 20x30 grid top + bottom.
+    assert len(solid.vertices) < 2 * 20 * 30
+
+
+def test_island_dem_produces_separate_sealed_solids():
+    # Two disconnected finite patches (mainland + island) -> two closed bodies
+    # in one mesh, both sealed.
+    dem = np.full((10, 16), np.nan, dtype=np.float32)
+    dem[1:5, 1:6] = 100.0
+    dem[6:9, 10:15] = 50.0
+    solid = _solid(dem, thickness_mm=2.0)
+
+    assert solid.is_watertight
+    assert solid.is_winding_consistent
+    # Watertight + Euler characteristic 4 == two sphere-topology bodies.
+    # (trimesh.body_count would confirm directly but needs scipy — not a dep.)
+    assert solid.euler_number == 4
     assert solid.volume > 0
 
 

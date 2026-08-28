@@ -1,5 +1,4 @@
 import Field from '../ui/Field.jsx';
-import styles from './TerrainParams.module.css';
 
 export default function TerrainParams({ terrain, onChange }) {
   return (
@@ -48,29 +47,14 @@ export default function TerrainParams({ terrain, onChange }) {
       </Field>
 
       <Field label="Base thickness (mm)" htmlFor="baseThicknessMm">
-        <div className={styles.baseInline}>
-          <div className={styles.baseCheck}>
-            <input
-              id="addBase"
-              type="checkbox"
-              className={styles.checkbox}
-              checked={terrain.addBase}
-              onChange={(e) => onChange('addBase', e.target.checked)}
-            />
-            <div className={styles.baseCaption}>Add base</div>
-          </div>
-
-          <div className={styles.baseInput}>
-            <input
-              id="baseThicknessMm"
-              type="number"
-              step="0.5"
-              min="0"
-              value={terrain.baseThicknessMm}
-              onChange={(e) => onChange('baseThicknessMm', e.target.value)}
-            />
-          </div>
-        </div>
+        <input
+          id="baseThicknessMm"
+          type="number"
+          step="0.5"
+          min="0.5"
+          value={terrain.baseThicknessMm}
+          onChange={(e) => onChange('baseThicknessMm', e.target.value)}
+        />
       </Field>
     </section>
   );
