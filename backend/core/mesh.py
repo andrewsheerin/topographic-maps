@@ -139,14 +139,21 @@ def dem_to_mesh(dem, px_m, scale_xy, z_scale):
 
     vertices = np.column_stack([xv.ravel(), yv.ravel(), z.ravel()])
 
-    faces = []
-    for y in range(h - 1):
-        for x in range(w - 1):
-            i = y * w + x
-            faces.append([i, i + 1, i + w])
-            faces.append([i + 1, i + w + 1, i + w])
+    # Two triangles per grid cell, built vectorized (F-10): the Python loop was
+    # O(h*w) interpreter work and dominated generation time on large areas.
+    idx = np.arange(h * w).reshape(h, w)
+    tl = idx[:-1, :-1].ravel()
+    tr = idx[:-1, 1:].ravel()
+    bl = idx[1:, :-1].ravel()
+    br = idx[1:, 1:].ravel()
+    faces = np.concatenate(
+        [
+            np.column_stack([tl, tr, bl]),
+            np.column_stack([tr, br, bl]),
+        ]
+    )
 
-    return trimesh.Trimesh(vertices=vertices, faces=np.array(faces), process=False)
+    return trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
 
 
 def add_base(surface, thickness_mm):
