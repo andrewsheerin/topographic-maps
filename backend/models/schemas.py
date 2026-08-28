@@ -31,7 +31,7 @@ class GenerateRequest(BaseModel):
     buffer_m: float
     target_max_mm: float
     add_base: bool
-    base_thickness_m: float
+    base_thickness_mm: float  # print millimetres (F-17; was real-world metres)
     road_levels: list[str] = []
     road_etch: RoadEtchParams = RoadEtchParams()
 

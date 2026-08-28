@@ -56,7 +56,7 @@ export default function TerrainParams({ terrain, onChange }) {
         />
       </Field>
 
-      <Field label="Base thickness (meters)" htmlFor="baseThicknessM">
+      <Field label="Base thickness (mm)" htmlFor="baseThicknessMm">
         <div className={styles.baseInline}>
           <div className={styles.baseCheck}>
             <input
@@ -71,10 +71,12 @@ export default function TerrainParams({ terrain, onChange }) {
 
           <div className={styles.baseInput}>
             <input
-              id="baseThicknessM"
+              id="baseThicknessMm"
               type="number"
-              value={terrain.baseThicknessM}
-              onChange={(e) => onChange('baseThicknessM', e.target.value)}
+              step="0.5"
+              min="0"
+              value={terrain.baseThicknessMm}
+              onChange={(e) => onChange('baseThicknessMm', e.target.value)}
             />
           </div>
         </div>

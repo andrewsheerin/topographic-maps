@@ -23,7 +23,7 @@ def generate_stl(req: GenerateRequest):
             buffer_m=req.buffer_m,
             target_max_mm=req.target_max_mm,
             add_base_flag=req.add_base,
-            base_thickness_m=req.base_thickness_m,
+            base_thickness_mm=req.base_thickness_mm,
         )
         return FileResponse(path, filename="terrain.stl", media_type="application/sla")
     except RuntimeError as e:
@@ -44,7 +44,7 @@ def generate_bundle(req: GenerateRequest):
             buffer_m=req.buffer_m,
             target_max_mm=req.target_max_mm,
             add_base_flag=req.add_base,
-            base_thickness_m=req.base_thickness_m,
+            base_thickness_mm=req.base_thickness_mm,
             road_levels=req.road_levels,
             road_etch=req.road_etch.model_dump(),
         )

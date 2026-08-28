@@ -24,7 +24,7 @@ const DEFAULT_TERRAIN = {
   bufferM: '50',
   targetMaxMm: '200',
   addBase: true,
-  baseThicknessM: '50',
+  baseThicknessMm: '2',
 };
 
 const DEFAULT_ROADS = ROAD_CLASSES.reduce((acc, c) => {
@@ -90,7 +90,7 @@ export default function Generator() {
       buffer_m: Number(terrain.bufferM || 0),
       target_max_mm: Number(terrain.targetMaxMm || 200),
       add_base: Boolean(terrain.addBase),
-      base_thickness_m: Number(terrain.baseThicknessM || 0),
+      base_thickness_mm: Number(terrain.baseThicknessMm || 0),
       road_levels: selectedRoadLevels,
       road_etch,
     };
