@@ -21,7 +21,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-12 | Hooks in `.claude/settings.json` used cwd-relative paths — one `cd backend` wedged the whole session | bug | C | DONE | 1639a57 | Both hook commands now absolute paths (user-approved). Takes full effect next session. |
 | F-13 | Land-clipped area polygons: keep true (Multi)Polygon boundaries for places + uploads, no convex hull | feature | C | DONE | 5467b90 | Verified: Gosnold 5 parts, Nantucket 3. Roads query hull ring + clips back to true boundary. |
 | F-14 | State outline as selectable area (Census CB 2023 state boundaries, `states` layer in gpkg) | feature | C | DONE | d120055 | "Use the whole state outline" button. Large states may exceed OpenTopography area limits — surfaced as API error. |
-| F-15 | Place picker shows the full result list — remove limit/offset pagination and "Show more" | fix | C | DONE | (this) | WI = 1913 rows in one scrollable list. |
+| F-15 | Place picker shows the full result list — remove limit/offset pagination and "Show more" | fix | C | DONE | 49e14d3 | WI = 1913 rows in one scrollable list. |
 
 ## Dropped
 
