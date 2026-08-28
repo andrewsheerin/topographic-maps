@@ -10,8 +10,10 @@ STLs now watertight sealed solids (F-16 — fixes RI half-missing-at-slice); mes
 vectorized. Dataset: subdivisions.gpkg (35,400 towns + 51 states). Tests 28/28, verify green.
 
 ## Blocked on
-Yours: C-1 (rotate API key), D-1/D-2, merging the branch stack to `main` (…F-15-picker-full-list
-→ F-16-watertight-stl → F-10-vectorize-mesh). Re-slice the RI STL to confirm F-16 end-to-end.
+Yours: C-1 (rotate API key), D-1/D-2, merging the branch stack to `main` (tip:
+`fix/F-18-remove-buffer`; each F-n branch stacks on the previous). Re-slice the RI STL to
+confirm F-16 end-to-end. Also F-17/F-18: base now print-mm (default 2 mm — confirm), buffer
+param removed, backend auto-reloads.
 
 ## Next
 Merge the stack, click through the 3 modes, then Phase B correctness (D-1/D-2 → F-2, F-4, F-5)
