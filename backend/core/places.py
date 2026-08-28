@@ -45,11 +45,11 @@ def _bbox_area_km2(
     )
 
 
-@lru_cache(maxsize=2)
-def _load_subdivisions(path_str: str) -> gpd.GeoDataFrame:
-    """Load + cache the subdivisions layer in WGS84. Cache keyed by path
+@lru_cache(maxsize=4)
+def _load_layer(path_str: str, layer: str) -> gpd.GeoDataFrame:
+    """Load + cache a GeoPackage layer in WGS84. Cache keyed by (path, layer)
     (restart the server after re-fetching the dataset)."""
-    gdf = gpd.read_file(path_str)
+    gdf = gpd.read_file(path_str, layer=layer)
     if gdf.crs is not None and gdf.crs.to_epsg() != 4326:
         gdf = gdf.to_crs("EPSG:4326")
     return gdf
@@ -87,7 +87,7 @@ def query_places(
     if not gpkg_path.exists():
         raise FileNotFoundError(MISSING_DATASET_MSG)
 
-    gdf = _load_subdivisions(str(gpkg_path))
+    gdf = _load_layer(str(gpkg_path), "subdivisions")
     if state:
         gdf = gdf[gdf["state"].astype(str).str.upper() == state.upper()]
     if q:
@@ -113,8 +113,33 @@ def get_place(geoid: str, gpkg_path: Path = SUBDIVISIONS_GPKG) -> dict | None:
     if not gpkg_path.exists():
         raise FileNotFoundError(MISSING_DATASET_MSG)
 
-    gdf = _load_subdivisions(str(gpkg_path))
+    gdf = _load_layer(str(gpkg_path), "subdivisions")
     match = gdf[gdf["geoid"].astype(str) == str(geoid)]
+    if match.empty:
+        return None
+    row = match.iloc[0]
+    if row.geometry is None or row.geometry.is_empty:
+        return None
+    return {**_summary(row), "geometry": to_area_geometry([row.geometry])}
+
+
+MISSING_STATES_MSG = (
+    "State outlines not in the dataset. Add them with: "
+    ".venv/Scripts/python.exe backend/scripts/fetch_tiger_subdivisions.py --only states"
+)
+
+
+def get_state(abbr: str, gpkg_path: Path = SUBDIVISIONS_GPKG) -> dict | None:
+    """One state outline by 2-letter abbreviation, with its true (Multi)Polygon
+    boundary (F-14). None when the abbreviation is unknown."""
+    if not gpkg_path.exists():
+        raise FileNotFoundError(MISSING_DATASET_MSG)
+    try:
+        gdf = _load_layer(str(gpkg_path), "states")
+    except Exception:
+        raise FileNotFoundError(MISSING_STATES_MSG)
+
+    match = gdf[gdf["state"].astype(str).str.upper() == str(abbr).upper()]
     if match.empty:
         return None
     row = match.iloc[0]

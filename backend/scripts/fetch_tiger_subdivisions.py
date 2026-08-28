@@ -35,6 +35,7 @@ COUSUB_URL = (
     "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_{fips}_cousub_500k.zip"
 )
 COUNTY_URL = "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_us_county_500k.zip"
+STATE_URL = "https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_us_state_500k.zip"
 _HEADERS = {"User-Agent": "topo2stl-tiger-subdivisions/1.0 (F-11)"}
 
 STATE_FIPS = {
@@ -154,22 +155,26 @@ def _fetch_state(abbr: str, county_names: dict[str, str]) -> gpd.GeoDataFrame:
     return out[mask]
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser(
-        description="Fetch TIGER County Subdivisions into a GeoPackage"
+def _fetch_state_outlines() -> gpd.GeoDataFrame:
+    """State boundaries (F-14) from the national state CB file, normalized to
+    the same schema as subdivisions (county empty)."""
+    gdf = _read_zip_shapefile(_download(STATE_URL))
+    if gdf.crs is not None and gdf.crs.to_epsg() != 4326:
+        gdf = gdf.to_crs("EPSG:4326")
+    gdf = gdf[gdf["STUSPS"].isin(STATE_FIPS.keys())]  # 50 states + DC only
+    return gpd.GeoDataFrame(
+        {
+            "geoid": gdf["GEOID"].astype(str),
+            "name": gdf["NAME"].astype(str),
+            "state": gdf["STUSPS"].astype(str),
+            "county": "",
+        },
+        geometry=gdf.geometry,
+        crs="EPSG:4326",
     )
-    ap.add_argument(
-        "--states", nargs="+", help="State abbreviations (default: all 50 + DC)"
-    )
-    args = ap.parse_args()
 
-    states = (
-        [s.upper() for s in args.states] if args.states else list(STATE_FIPS.keys())
-    )
-    unknown = [s for s in states if s not in STATE_FIPS]
-    if unknown:
-        raise SystemExit(f"Unknown state abbreviations: {unknown}")
 
+def _fetch_subdivisions(states: list[str]) -> gpd.GeoDataFrame:
     print("Fetching national county names for disambiguation ...")
     county_names = _county_names()
     print(f"  {len(county_names)} counties")
@@ -185,13 +190,44 @@ def main() -> None:
 
     if not frames:
         raise SystemExit("No subdivisions fetched.")
+    return gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), crs="EPSG:4326")
 
-    subs = gpd.GeoDataFrame(pd.concat(frames, ignore_index=True), crs="EPSG:4326")
-    SUBDIVISIONS_GPKG.parent.mkdir(parents=True, exist_ok=True)
-    subs.to_file(SUBDIVISIONS_GPKG, layer="subdivisions", driver="GPKG")
-    print(
-        f"\nwrote {SUBDIVISIONS_GPKG}  ({len(subs)} subdivisions, {len(frames)} states)"
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        description="Fetch TIGER County Subdivisions + state outlines into a GeoPackage"
     )
+    ap.add_argument(
+        "--states", nargs="+", help="State abbreviations (default: all 50 + DC)"
+    )
+    ap.add_argument(
+        "--only",
+        choices=["all", "subdivisions", "states"],
+        default="all",
+        help="Which layer(s) to (re)fetch; the other layer in the gpkg is kept",
+    )
+    args = ap.parse_args()
+
+    states = (
+        [s.upper() for s in args.states] if args.states else list(STATE_FIPS.keys())
+    )
+    unknown = [s for s in states if s not in STATE_FIPS]
+    if unknown:
+        raise SystemExit(f"Unknown state abbreviations: {unknown}")
+
+    SUBDIVISIONS_GPKG.parent.mkdir(parents=True, exist_ok=True)
+
+    if args.only in ("all", "subdivisions"):
+        subs = _fetch_subdivisions(states)
+        subs.to_file(SUBDIVISIONS_GPKG, layer="subdivisions", driver="GPKG")
+        print(f"wrote layer 'subdivisions'  ({len(subs)} subdivisions)")
+
+    if args.only in ("all", "states"):
+        outlines = _fetch_state_outlines()
+        outlines.to_file(SUBDIVISIONS_GPKG, layer="states", driver="GPKG")
+        print(f"wrote layer 'states'  ({len(outlines)} state outlines)")
+
+    print(f"\ndone: {SUBDIVISIONS_GPKG}")
 
 
 if __name__ == "__main__":

@@ -122,3 +122,16 @@ export async function fetchPlaceDetail(geoid) {
   }
   return data;
 }
+
+/**
+ * GET /api/states/{abbr} -> state outline with its polygon geometry.
+ */
+export async function fetchStateOutline(abbr) {
+  const res = await fetch(`/api/states/${encodeURIComponent(abbr)}`);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const detail = data && (data.detail || data.message);
+    throw new Error(detail || `State lookup failed (HTTP ${res.status}).`);
+  }
+  return data;
+}

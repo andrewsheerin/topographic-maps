@@ -8,11 +8,12 @@ import styles from './PlacePicker.module.css';
 const PAGE = 50;
 
 /**
- * Search TIGER county subdivisions (cities/towns) by state and name.
- * Owns its search/list state; reports the chosen place summary up via onPick —
- * the parent fetches the boundary and sets the area.
+ * Search TIGER county subdivisions (cities/towns) by state and name, or take a
+ * whole state's outline. Owns its search/list state; reports the chosen place
+ * summary (onPick) or state abbreviation (onPickState) up — the parent fetches
+ * the boundary and sets the area.
  */
-export default function PlacePicker({ onPick, selectedGeoid }) {
+export default function PlacePicker({ onPick, onPickState, selectedGeoid }) {
   const [state, setState] = useState('');
   const [query, setQuery] = useState('');
   const [places, setPlaces] = useState([]);
@@ -88,6 +89,12 @@ export default function PlacePicker({ onPick, selectedGeoid }) {
           onChange={(e) => setQuery(e.target.value)}
         />
       </div>
+
+      {state && (
+        <Button className={styles.stateOutline} onClick={() => onPickState(state)}>
+          Use the whole state outline
+        </Button>
+      )}
 
       {!state && !query.trim() && (
         <p className={styles.note}>Pick a state or search by name.</p>

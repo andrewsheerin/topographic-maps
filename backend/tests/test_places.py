@@ -5,7 +5,7 @@ import geopandas as gpd
 import pytest
 from shapely.geometry import MultiPolygon, Polygon, shape
 
-from core.places import get_place, query_places
+from core.places import get_place, get_state, query_places
 
 
 def _box(lon: float, lat: float, d: float = 0.1) -> Polygon:
@@ -32,6 +32,18 @@ def gpkg(tmp_path_factory):
     )
     path = tmp_path_factory.mktemp("tiger") / "subdivisions.gpkg"
     gdf.to_file(path, layer="subdivisions", driver="GPKG")
+
+    states = gpd.GeoDataFrame(
+        {
+            "geoid": ["44"],
+            "name": ["Rhode Island"],
+            "state": ["RI"],
+            "county": [""],
+        },
+        geometry=[MultiPolygon([_box(-71.9, 41.3, 0.6), _box(-71.6, 41.1, 0.1)])],
+        crs="EPSG:4326",
+    )
+    states.to_file(path, layer="states", driver="GPKG")
     return path
 
 
@@ -85,3 +97,25 @@ def test_get_place_unknown_geoid(gpkg):
 def test_missing_dataset_raises_actionable_error(tmp_path):
     with pytest.raises(FileNotFoundError, match="fetch_tiger_subdivisions"):
         query_places(gpkg_path=tmp_path / "nope.gpkg")
+
+
+def test_get_state_returns_true_outline(gpkg):
+    state = get_state("ri", gpkg_path=gpkg)
+    assert state["name"] == "Rhode Island"
+    assert shape(state["geometry"]).geom_type == "MultiPolygon"
+
+
+def test_get_state_unknown_abbr(gpkg):
+    assert get_state("ZZ", gpkg_path=gpkg) is None
+
+
+def test_get_state_missing_layer_is_actionable(tmp_path_factory):
+    gdf = gpd.GeoDataFrame(
+        {"geoid": ["1"], "name": ["A"], "state": ["RI"], "county": [""]},
+        geometry=[_box(0, 0)],
+        crs="EPSG:4326",
+    )
+    path = tmp_path_factory.mktemp("nostates") / "subdivisions.gpkg"
+    gdf.to_file(path, layer="subdivisions", driver="GPKG")
+    with pytest.raises(FileNotFoundError, match="--only states"):
+        get_state("RI", gpkg_path=path)

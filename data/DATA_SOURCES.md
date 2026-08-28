@@ -28,11 +28,12 @@ and licenses are on the record.
 
 ## US Census TIGER county subdivisions (place picker)
 
-- **File(s):** `data/tiger/subdivisions.gpkg` (gitignored; regenerate with
-  `backend/scripts/fetch_tiger_subdivisions.py`).
+- **File(s):** `data/tiger/subdivisions.gpkg`, layers `subdivisions` + `states` (gitignored;
+  regenerate with `backend/scripts/fetch_tiger_subdivisions.py`).
 - **Source / citation:** US Census Bureau, Cartographic Boundary Files 2023 — County Subdivisions
   (1:500,000), per-state `cb_2023_<FIPS>_cousub_500k.zip`; county names joined from
-  `cb_2023_us_county_500k.zip` (all under `www2.census.gov/geo/tiger/GENZ2023/shp/`).
+  `cb_2023_us_county_500k.zip`; state outlines (F-14) from `cb_2023_us_state_500k.zip`
+  (all under `www2.census.gov/geo/tiger/GENZ2023/shp/`).
 - **Version / retrieved:** 2023 vintage; retrieval date printed by the fetch script run.
 - **License / terms:** public domain (US federal government work).
 - **CRS / datum:** reprojected to EPSG:4326 (WGS84) by the fetch script; served as-is.

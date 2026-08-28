@@ -13,6 +13,7 @@ const MODES = [
 export default function AreaSection({
   onUpload,
   onPickPlace,
+  onPickState,
   selectedGeoid,
   areaLabel,
   onClearArea,
@@ -75,7 +76,11 @@ export default function AreaSection({
       )}
 
       {mode === 'place' && (
-        <PlacePicker onPick={onPickPlace} selectedGeoid={selectedGeoid} />
+        <PlacePicker
+          onPick={onPickPlace}
+          onPickState={onPickState}
+          selectedGeoid={selectedGeoid}
+        />
       )}
 
       {areaLabel && (

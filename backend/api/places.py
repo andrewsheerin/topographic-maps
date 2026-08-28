@@ -30,3 +30,16 @@ def place_detail(geoid: str):
     if place is None:
         raise HTTPException(status_code=404, detail=f"No place with GEOID {geoid}.")
     return place
+
+
+@router.get("/states/{abbr}", response_model=PlaceDetail)
+def state_outline(abbr: str):
+    try:
+        state = places.get_state(abbr)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    if state is None:
+        raise HTTPException(
+            status_code=404, detail=f"No state with abbreviation {abbr}."
+        )
+    return state

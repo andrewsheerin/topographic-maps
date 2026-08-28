@@ -139,6 +139,19 @@ export default function Generator() {
     }
   }, []);
 
+  const handlePickState = useCallback(async (abbr) => {
+    setStatus(`Loading state outline for ${abbr}...`);
+    try {
+      const detail = await api.fetchStateOutline(abbr);
+      setPolygon({ type: 'Feature', properties: {}, geometry: detail.geometry });
+      setAreaSource({ label: `${detail.name} (state outline)` });
+      setRoadsGeojson(null);
+      setStatus(`Area set to ${detail.name}.`);
+    } catch (err) {
+      setStatus(err.message);
+    }
+  }, []);
+
   const handlePickPlace = useCallback(async (place) => {
     setStatus(`Loading boundary for ${place.name}...`);
     try {
@@ -230,6 +243,7 @@ export default function Generator() {
         <AreaSection
           onUpload={handleUpload}
           onPickPlace={handlePickPlace}
+          onPickState={handlePickState}
           selectedGeoid={areaSource?.geoid ?? null}
           areaLabel={areaSource?.label ?? null}
           onClearArea={handleClearArea}
