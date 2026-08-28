@@ -8,8 +8,45 @@ import time
 
 import geopandas as gpd
 import requests
+from shapely.geometry import shape
 
 import constants
+
+
+def outer_ring_coords(area_wgs84) -> list:
+    """The single outer ring used for the Overpass `poly` filter.
+
+    A Polygon contributes its own exterior. A MultiPolygon (multi-part coastal
+    area, F-13) has no single exterior, so its convex hull's ring is used — the
+    query over-fetches across water and the results are clipped back to the true
+    boundary afterwards."""
+    outer = area_wgs84 if area_wgs84.geom_type == "Polygon" else area_wgs84.convex_hull
+    return list(outer.exterior.coords)
+
+
+def clip_line_features_to_area(features: list, area_wgs84) -> list:
+    """Intersect LineString features with an areal geometry, splitting lines
+    that cross gaps (water between islands) into separate segments."""
+    out = []
+    for f in features:
+        clipped = shape(f["geometry"]).intersection(area_wgs84)
+        if clipped.is_empty:
+            continue
+        parts = getattr(clipped, "geoms", [clipped])
+        for part in parts:
+            if part.geom_type != "LineString" or len(part.coords) < 2:
+                continue
+            out.append(
+                {
+                    "type": "Feature",
+                    "properties": dict(f["properties"]),
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [(x, y) for x, y in part.coords],
+                    },
+                }
+            )
+    return out
 
 
 def _post_overpass(query: str, *, timeout_s: int = 60, max_retries: int = 3) -> dict:
@@ -52,7 +89,7 @@ def fetch_roads_geojson_overpass(polygon_wgs84, highway_levels):
     if not highway_levels:
         return {"type": "FeatureCollection", "features": []}
 
-    coords = list(polygon_wgs84.exterior.coords)
+    coords = outer_ring_coords(polygon_wgs84)
 
     # Overpass polygons must be fairly short or the query times out; downsample
     # a dense ring to keep the query cheap.
@@ -90,6 +127,11 @@ def fetch_roads_geojson_overpass(polygon_wgs84, highway_levels):
                 },
             }
         )
+
+    # Multi-part areas were queried by their hull; cut the over-fetch back to
+    # the true boundary so no roads float over water.
+    if polygon_wgs84.geom_type != "Polygon":
+        features = clip_line_features_to_area(features, polygon_wgs84)
 
     return {"type": "FeatureCollection", "features": features}
 

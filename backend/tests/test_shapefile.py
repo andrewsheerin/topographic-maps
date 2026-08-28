@@ -78,7 +78,7 @@ def test_geojson_bare_geometry():
     assert shape(geom).equals(shape(SQUARE))
 
 
-def test_geojson_multipolygon_reduces_to_convex_hull():
+def test_geojson_multipolygon_keeps_true_boundary():
     multi = {
         "type": "MultiPolygon",
         "coordinates": [
@@ -87,8 +87,9 @@ def test_geojson_multipolygon_reduces_to_convex_hull():
         ],
     }
     geom = polygon_geojson_from_geojson(json.dumps(multi))
-    assert geom["type"] == "Polygon"
-    assert shape(geom).contains(shape(multi))
+    # F-13: multi-part areas stay multi-part — no hull spanning the gap.
+    assert geom["type"] == "MultiPolygon"
+    assert shape(geom).equals(shape(multi))
 
 
 def test_geojson_foreign_crs_rejected():

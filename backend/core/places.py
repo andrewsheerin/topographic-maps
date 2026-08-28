@@ -17,7 +17,7 @@ from pathlib import Path
 import geopandas as gpd
 
 import config
-from core.shapefile import to_single_polygon
+from core.shapefile import to_area_geometry
 
 SUBDIVISIONS_GPKG = config.REPO_ROOT / "data" / "tiger" / "subdivisions.gpkg"
 
@@ -104,13 +104,12 @@ def query_places(
 
 
 def get_place(geoid: str, gpkg_path: Path = SUBDIVISIONS_GPKG) -> dict | None:
-    """One subdivision by GEOID, with its polygon geometry (GeoJSON) for map
+    """One subdivision by GEOID, with its boundary geometry (GeoJSON) for map
     display and DEM extraction. None when the GEOID is unknown.
 
-    Multi-part boundaries (coastal towns with islands) are reduced to a single
-    polygon with the same policy as file uploads (union -> convex hull) — the
-    pipeline (and the Overpass road query) needs one contiguous polygon, and the
-    map should show exactly the area that gets meshed."""
+    The true shoreline-clipped boundary is kept (F-13): coastal towns with
+    islands come back as MultiPolygon — the STL covers land only, and the map
+    shows exactly the area that gets meshed."""
     if not gpkg_path.exists():
         raise FileNotFoundError(MISSING_DATASET_MSG)
 
@@ -121,4 +120,4 @@ def get_place(geoid: str, gpkg_path: Path = SUBDIVISIONS_GPKG) -> dict | None:
     row = match.iloc[0]
     if row.geometry is None or row.geometry.is_empty:
         return None
-    return {**_summary(row), "geometry": to_single_polygon([row.geometry])}
+    return {**_summary(row), "geometry": to_area_geometry([row.geometry])}

@@ -68,13 +68,14 @@ def test_get_place_returns_geometry(gpkg):
     assert geom.contains(shape({"type": "Point", "coordinates": [-71.35, 41.75]}))
 
 
-def test_get_place_reduces_multipolygon_to_single_polygon(gpkg):
+def test_get_place_keeps_multipolygon_boundary(gpkg):
     place = get_place("4400003", gpkg_path=gpkg)
     geom = shape(place["geometry"])
-    # Multi-part island boundary -> one contiguous polygon (convex hull), same
-    # policy as file uploads; the roads query needs a single exterior ring.
-    assert geom.geom_type == "Polygon"
-    assert geom.contains(shape({"type": "Point", "coordinates": [-71.575, 41.125]}))
+    # F-13: island towns keep their true multi-part, land-only boundary.
+    assert geom.geom_type == "MultiPolygon"
+    assert len(geom.geoms) == 2
+    # The water gap between the parts is NOT covered.
+    assert not geom.contains(shape({"type": "Point", "coordinates": [-71.53, 41.17]}))
 
 
 def test_get_place_unknown_geoid(gpkg):

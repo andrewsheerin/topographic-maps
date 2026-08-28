@@ -1,7 +1,7 @@
 """Read an uploaded boundary file (zipped shapefile or GeoJSON) into a single
-WGS84 polygon geometry.
+WGS84 areal geometry (Polygon or MultiPolygon — true boundaries are kept, F-13).
 
-The DEM pipeline works in WGS84 (EPSG:4326) and needs one polygon area. Per
+The DEM pipeline works in WGS84 (EPSG:4326) and needs one areal geometry. Per
 science-integrity, CRS is never assumed: a shapefile without a .prj is rejected,
 not guessed. GeoJSON is WGS84 by spec (RFC 7946); a legacy `crs` member naming
 anything else is rejected."""
@@ -27,29 +27,30 @@ _WGS84_CRS_NAMES = {
 }
 
 
-def to_single_polygon(geoms: list) -> dict:
-    """Union geometries and reduce to one polygon GeoJSON geometry dict.
-    Raises ValueError when no polygon area can be derived."""
+def to_area_geometry(geoms: list) -> dict:
+    """Union geometries into one areal GeoJSON geometry dict (Polygon or
+    MultiPolygon). True boundaries are preserved — multi-part coastal areas stay
+    multi-part; nothing is hulled over water (F-13). Raises ValueError when no
+    polygonal area can be derived."""
     geoms = [g for g in geoms if g is not None and not g.is_empty]
     if not geoms:
         raise ValueError("The file has no usable geometry.")
 
     union = unary_union(geoms)
-    if union.geom_type == "Polygon":
-        poly = union
-    elif union.geom_type in ("MultiPolygon", "GeometryCollection"):
-        # A multi-part upload is reduced to its convex hull so the pipeline has a
-        # single contiguous area to extract.
-        poly = union.convex_hull
-    else:
+    if union.geom_type == "GeometryCollection":
+        polygonal = [
+            g for g in union.geoms if g.geom_type in ("Polygon", "MultiPolygon")
+        ]
+        if not polygonal:
+            raise ValueError("The file contains no polygon area.")
+        union = unary_union(polygonal)
+
+    if union.is_empty or union.geom_type not in ("Polygon", "MultiPolygon"):
         raise ValueError(
             f"The geometry is {union.geom_type}; a polygon area is required."
         )
 
-    if poly.is_empty or poly.geom_type != "Polygon":
-        raise ValueError("Could not derive a polygon area from the file.")
-
-    return mapping(poly)
+    return mapping(union)
 
 
 def polygon_geojson_from_zip(zip_path: str) -> dict:
@@ -77,7 +78,7 @@ def polygon_geojson_from_zip(zip_path: str) -> dict:
         )
 
     gdf = gdf.to_crs(WGS84)
-    return to_single_polygon(list(gdf.geometry))
+    return to_area_geometry(list(gdf.geometry))
 
 
 def polygon_geojson_from_geojson(text: str) -> dict:
@@ -122,4 +123,4 @@ def polygon_geojson_from_geojson(text: str) -> dict:
         except (ValueError, KeyError, TypeError, AttributeError):
             raise ValueError("The GeoJSON contains an invalid geometry.")
 
-    return to_single_polygon(geoms)
+    return to_area_geometry(geoms)
