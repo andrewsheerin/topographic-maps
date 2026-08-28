@@ -39,3 +39,28 @@ class GenerateRequest(BaseModel):
 class RoadsRequest(BaseModel):
     polygon_geojson: dict[str, Any]
     road_levels: list[str] = []
+
+
+class BBox(BaseModel):
+    """Geographic extent in WGS84 decimal degrees."""
+
+    min_lon: float
+    min_lat: float
+    max_lon: float
+    max_lat: float
+
+
+class PlaceSummary(BaseModel):
+    """One TIGER county subdivision (town/city) in the picker list.
+    `area_km2` is the approximate bbox area, display-only."""
+
+    geoid: str
+    name: str
+    state: str
+    county: str | None = None
+    bbox: BBox
+    area_km2: float
+
+
+class PlaceDetail(PlaceSummary):
+    geometry: dict[str, Any]  # GeoJSON polygon, WGS84

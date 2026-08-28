@@ -38,6 +38,7 @@ Thumbs.db
 # Generated data + app outputs
 data/*.db
 data/generated/
+data/tiger/
 terrain_stl_*
 *.stl
 *.zip

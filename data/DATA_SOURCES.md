@@ -3,8 +3,9 @@
 *One entry per dataset, added in the same commit that adds the data. See
 `.claude/rules/science-integrity.md` → Dataset provenance.*
 
-No datasets are committed to `data/` — all inputs are fetched live per request. These entries
-document the runtime sources so their CRS, units, and licenses are on the record.
+No datasets are committed to `data/` — inputs are fetched live per request, or (TIGER) fetched
+once by a script into a gitignored file. These entries document the sources so their CRS, units,
+and licenses are on the record.
 
 ## OpenTopography DEMs
 
@@ -24,6 +25,28 @@ document the runtime sources so their CRS, units, and licenses are on the record
 - **Derived from / lineage:** primary (upstream provider via OpenTopography).
 - **Known limitations / uncertainty:** vertical accuracy and resolution vary by product;
   `dem_to_mesh` rejects relief > `RELIEF_SANITY_MAX_M` as a likely unit/CRS error.
+
+## US Census TIGER county subdivisions (place picker)
+
+- **File(s):** `data/tiger/subdivisions.gpkg` (gitignored; regenerate with
+  `backend/scripts/fetch_tiger_subdivisions.py`).
+- **Source / citation:** US Census Bureau, Cartographic Boundary Files 2023 — County Subdivisions
+  (1:500,000), per-state `cb_2023_<FIPS>_cousub_500k.zip`; county names joined from
+  `cb_2023_us_county_500k.zip` (all under `www2.census.gov/geo/tiger/GENZ2023/shp/`).
+- **Version / retrieved:** 2023 vintage; retrieval date printed by the fetch script run.
+- **License / terms:** public domain (US federal government work).
+- **CRS / datum:** reprojected to EPSG:4326 (WGS84) by the fetch script; served as-is.
+- **Temporal coverage:** 2023 boundary vintage.
+- **Units:** geographic degrees; the picker's `area_km2` is an approximate bbox area
+  (display-only, equirectangular km-per-degree factors in `core/places.py`).
+- **Nodata convention:** water-only pseudo-subdivisions (`ALAND == 0`) and "County subdivisions
+  not defined" filler records are dropped by the fetch script — they are not selectable areas.
+- **Derived from / lineage:** `fetch_tiger_subdivisions.py` downloads, filters, joins county
+  names, reprojects, and writes the GeoPackage; fully regenerable from that script.
+- **Known limitations / uncertainty:** 1:500k generalized boundaries (not parcel-accurate);
+  county subdivisions are real town/township governments in ~20 strong-MCD states but
+  statistical Census County Divisions elsewhere. Approach ported from swpt-app (F-79/D-28),
+  which chose subdivisions over TIGER Places to avoid unincorporated gaps.
 
 ## OpenStreetMap roads (Overpass)
 

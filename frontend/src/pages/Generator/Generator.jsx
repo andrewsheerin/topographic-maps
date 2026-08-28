@@ -45,6 +45,9 @@ function downloadBlob(blob, filename) {
 
 export default function Generator() {
   const [polygon, setPolygon] = useState(null);
+  // Where the current polygon came from: { label, geoid? } — label is shown in
+  // the Area section, geoid highlights the picked place in the picker list.
+  const [areaSource, setAreaSource] = useState(null);
   const [roadsGeojson, setRoadsGeojson] = useState(null);
   const [status, setStatus] = useState('');
   const [terrain, setTerrain] = useState(DEFAULT_TERRAIN);
@@ -97,35 +100,56 @@ export default function Generator() {
 
   const handlePolygonCreated = useCallback((feature) => {
     setPolygon(feature);
+    setAreaSource({ label: 'Drawn shape' });
     setRoadsGeojson(null);
-    setStatus('Polygon set.');
+    setStatus('Area set.');
   }, []);
 
   const handlePolygonEdited = useCallback((feature) => {
     setPolygon(feature);
+    setAreaSource((s) => s ?? { label: 'Drawn shape' });
     setRoadsGeojson(null);
-    setStatus('Polygon updated.');
+    setStatus('Area updated.');
   }, []);
 
   const handlePolygonDeleted = useCallback(() => {
     setPolygon(null);
+    setAreaSource(null);
     setRoadsGeojson(null);
-    setStatus('Polygon cleared.');
+    setStatus('Area cleared.');
   }, []);
 
-  const handleClearPolygon = useCallback(() => {
+  const handleClearArea = useCallback(() => {
     setPolygon(null);
+    setAreaSource(null);
     setRoadsGeojson(null);
-    setStatus('Polygon cleared.');
+    setStatus('Area cleared.');
   }, []);
 
   const handleUpload = useCallback(async (file) => {
-    setStatus('Uploading shapefile...');
+    setStatus('Reading boundary file...');
     try {
-      const geometry = await api.uploadShapefile(file);
+      const geometry = await api.uploadBoundary(file);
       setPolygon({ type: 'Feature', properties: {}, geometry });
+      setAreaSource({ label: file.name });
       setRoadsGeojson(null);
-      setStatus('Polygon loaded from shapefile.');
+      setStatus('Area loaded from file.');
+    } catch (err) {
+      setStatus(err.message);
+    }
+  }, []);
+
+  const handlePickPlace = useCallback(async (place) => {
+    setStatus(`Loading boundary for ${place.name}...`);
+    try {
+      const detail = await api.fetchPlaceDetail(place.geoid);
+      setPolygon({ type: 'Feature', properties: {}, geometry: detail.geometry });
+      setAreaSource({
+        label: `${detail.name}, ${detail.state}`,
+        geoid: detail.geoid,
+      });
+      setRoadsGeojson(null);
+      setStatus(`Area set to ${detail.name}, ${detail.state}.`);
     } catch (err) {
       setStatus(err.message);
     }
@@ -135,7 +159,7 @@ export default function Generator() {
 
   const handleLoadRoads = useCallback(async () => {
     if (!polygon) {
-      setStatus('Draw a shape or upload a shapefile first.');
+      setStatus('Set an area first — draw, upload, or pick a city/town.');
       return;
     }
     if (selectedRoadLevels.length === 0) {
@@ -164,7 +188,7 @@ export default function Generator() {
 
   const handleGenerateStl = useCallback(async () => {
     if (!polygon) {
-      setStatus('Draw a shape or upload a shapefile first.');
+      setStatus('Set an area first — draw, upload, or pick a city/town.');
       return;
     }
     setStatus('Generating STL...');
@@ -182,7 +206,7 @@ export default function Generator() {
 
   const handleGenerateBundle = useCallback(async () => {
     if (!polygon) {
-      setStatus('Draw a shape or upload a shapefile first.');
+      setStatus('Set an area first — draw, upload, or pick a city/town.');
       return;
     }
     setStatus('Generating bundle (this may take a while)...');
@@ -205,7 +229,10 @@ export default function Generator() {
 
         <AreaSection
           onUpload={handleUpload}
-          onClearPolygon={handleClearPolygon}
+          onPickPlace={handlePickPlace}
+          selectedGeoid={areaSource?.geoid ?? null}
+          areaLabel={areaSource?.label ?? null}
+          onClearArea={handleClearArea}
         />
 
         <TerrainParams terrain={terrain} onChange={updateTerrain} />

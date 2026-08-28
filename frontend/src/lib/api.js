@@ -68,24 +68,57 @@ export async function generateBundle(body) {
 }
 
 /**
- * POST /api/upload-shapefile (multipart) -> polygon GeoJSON geometry.
- * Backend extracts the zipped shapefile, reprojects to WGS84, and returns a
- * single polygon. On failure the caller surfaces `detail` in the status line.
+ * POST /api/upload-boundary (multipart) -> polygon GeoJSON geometry.
+ * Accepts a zipped shapefile or a GeoJSON file; the backend reduces it to a
+ * single WGS84 polygon. On failure the caller surfaces `detail` in the status
+ * line.
  */
-export async function uploadShapefile(file) {
+export async function uploadBoundary(file) {
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await fetch('/api/upload-shapefile', {
+  const res = await fetch('/api/upload-boundary', {
     method: 'POST',
     body: formData,
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || 'Shapefile upload failed.');
+    throw new Error(err.detail || 'Boundary upload failed.');
   }
 
   const data = await res.json();
   return data.polygon_geojson;
+}
+
+/**
+ * GET /api/places -> list of place summaries (TIGER county subdivisions).
+ */
+export async function fetchPlaces({ state, q, limit = 100, offset = 0 }) {
+  const params = new URLSearchParams();
+  if (state) params.set('state', state);
+  if (q) params.set('q', q);
+  params.set('limit', String(limit));
+  params.set('offset', String(offset));
+
+  const res = await fetch(`/api/places?${params}`);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const detail = data && (data.detail || data.message);
+    throw new Error(detail || `Place search failed (HTTP ${res.status}).`);
+  }
+  return data;
+}
+
+/**
+ * GET /api/places/{geoid} -> place with its polygon geometry.
+ */
+export async function fetchPlaceDetail(geoid) {
+  const res = await fetch(`/api/places/${encodeURIComponent(geoid)}`);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const detail = data && (data.detail || data.message);
+    throw new Error(detail || `Place lookup failed (HTTP ${res.status}).`);
+  }
+  return data;
 }

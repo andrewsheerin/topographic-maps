@@ -27,7 +27,7 @@ _WGS84_CRS_NAMES = {
 }
 
 
-def _to_single_polygon(geoms: list) -> dict:
+def to_single_polygon(geoms: list) -> dict:
     """Union geometries and reduce to one polygon GeoJSON geometry dict.
     Raises ValueError when no polygon area can be derived."""
     geoms = [g for g in geoms if g is not None and not g.is_empty]
@@ -77,7 +77,7 @@ def polygon_geojson_from_zip(zip_path: str) -> dict:
         )
 
     gdf = gdf.to_crs(WGS84)
-    return _to_single_polygon(list(gdf.geometry))
+    return to_single_polygon(list(gdf.geometry))
 
 
 def polygon_geojson_from_geojson(text: str) -> dict:
@@ -122,4 +122,4 @@ def polygon_geojson_from_geojson(text: str) -> dict:
         except (ValueError, KeyError, TypeError, AttributeError):
             raise ValueError("The GeoJSON contains an invalid geometry.")
 
-    return _to_single_polygon(geoms)
+    return to_single_polygon(geoms)
