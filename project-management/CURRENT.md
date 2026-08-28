@@ -5,14 +5,13 @@
 **Status:** WIP on `feat/F-11-area-modes` (stacked on `feat/F3-shapefile-upload`).
 
 ## Right now
-F-11/12/13/14/15 all DONE. Area UI: draw / upload (shp+GeoJSON) / city-town picker with true
-land-clipped boundaries, state outlines, full un-paginated lists. Dataset: subdivisions.gpkg
-(35,400 towns + 51 state outlines). Tests 24/24, verify green.
+F-11..F-16 + F-10 all DONE. Area UI (3 modes, true boundaries, state outlines, full lists);
+STLs now watertight sealed solids (F-16 — fixes RI half-missing-at-slice); mesh build
+vectorized. Dataset: subdivisions.gpkg (35,400 towns + 51 states). Tests 28/28, verify green.
 
 ## Blocked on
-Yours: C-1 (rotate API key), D-1/D-2, merging the branch stack to `main`
-(F3-shapefile-upload → F-11-area-modes → F-13-area-boundaries → F-14-state-outline →
-F-15-picker-full-list). Browser click-through of the new Area UI still worth a look.
+Yours: C-1 (rotate API key), D-1/D-2, merging the branch stack to `main` (…F-15-picker-full-list
+→ F-16-watertight-stl → F-10-vectorize-mesh). Re-slice the RI STL to confirm F-16 end-to-end.
 
 ## Next
 Merge the stack, click through the 3 modes, then Phase B correctness (D-1/D-2 → F-2, F-4, F-5)

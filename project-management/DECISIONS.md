@@ -73,6 +73,8 @@ One line each — what makes autonomous tiers auditable. Newest first.
 | 2026-08-28 | PlacePicker owns its list-search fetching; Generator fetches the chosen boundary | Keeps picker-internal state out of Generator; the app-state mutation stays at page level |
 | 2026-08-28 | ~~Multi-part place boundaries reduce to convex hull~~ Superseded by F-13 (user request): true boundaries kept everywhere | Mesh flattens outside-area cells to base plane, so MultiPolygon flows through; Overpass queries the hull ring and results clip back to the true boundary |
 | 2026-08-28 | State outlines live as a second layer (`states`) in the same gpkg; endpoint reuses PlaceDetail | One dataset file, one provenance entry; verified layer writes don't clobber each other |
+| 2026-08-28 | `add_base` seals a full manifold and refuses non-watertight export; thickness ≤ 0 rejected | Slicers silently drop regions of non-manifold meshes — better to fail loudly than emit a broken STL |
+| 2026-08-28 | "Add base" unchecked still exports the open surface sheet (not printable) | Kept as an escape hatch for non-print workflows (e.g. editing in Blender); printing path always has base on |
 | 2026-08-09 | Pin backend lint via `backend/ruff.toml` (select E4/E7/E9/F/I, line-length 88) | Make `verify.py` reproducible regardless of any global/parent ruff config |
 | 2026-08-09 | Split `dem_stl.py` → `core/{geometry,dem,roads,mesh,pipeline}.py` + `constants.py` + `config.py` | Factory backend layout; keep FastAPI out of `core/` so the science is testable |
 | 2026-08-09 | Centralize domain constants in `constants.py` with sourced comments | science-integrity: no magic numbers in formulas |
