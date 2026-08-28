@@ -149,9 +149,55 @@ def dem_to_mesh(dem, px_m, scale_xy, z_scale):
     return trimesh.Trimesh(vertices=vertices, faces=np.array(faces), process=False)
 
 
-def add_base(mesh, thickness_mm):
-    """Add a flat base `thickness_mm` below the mesh's lowest point."""
-    minz = mesh.vertices[:, 2].min()
-    base = mesh.copy()
-    base.vertices[:, 2] = minz - thickness_mm
-    return trimesh.util.concatenate([mesh, base])
+def add_base(surface, thickness_mm):
+    """Seal an open heightmap surface into a watertight solid (F-16): an
+    inverted copy of the surface `thickness_mm` below its lowest point forms the
+    bottom, and quad walls close the open boundary. Normals are oriented
+    outward, and a non-watertight result is refused rather than exported —
+    slicers silently drop regions of non-manifold meshes.
+    """
+    thickness_mm = float(thickness_mm)
+    if thickness_mm <= 0:
+        raise ValueError("Base thickness must be > 0 mm to form a printable solid.")
+
+    n = len(surface.vertices)
+    minz = surface.vertices[:, 2].min()
+
+    bottom_vertices = surface.vertices.copy()
+    bottom_vertices[:, 2] = minz - thickness_mm
+    bottom_faces = surface.faces[:, ::-1] + n  # reversed winding -> faces down
+
+    # Directed edges that belong to exactly one face are the open boundary.
+    directed = surface.edges
+    undirected = np.sort(directed, axis=1)
+    _, inverse, counts = np.unique(
+        undirected, axis=0, return_inverse=True, return_counts=True
+    )
+    boundary = directed[counts[inverse] == 1]
+    if len(boundary) == 0:
+        raise RuntimeError("Surface has no open boundary; cannot seal a base onto it.")
+
+    # Wall quads: for a boundary edge a->b on the top, the wall presents b->a
+    # (opposite direction), keeping the winding consistent with top and bottom.
+    a, b = boundary[:, 0], boundary[:, 1]
+    walls = np.concatenate(
+        [
+            np.column_stack([b, a, a + n]),
+            np.column_stack([b, a + n, b + n]),
+        ]
+    )
+
+    solid = trimesh.Trimesh(
+        vertices=np.vstack([surface.vertices, bottom_vertices]),
+        faces=np.vstack([surface.faces, bottom_faces, walls]),
+        process=False,
+    )
+    if solid.volume < 0:
+        solid.invert()
+
+    if not solid.is_watertight or not solid.is_winding_consistent:
+        raise RuntimeError(
+            "Generated mesh is not watertight — refusing to export a broken STL. "
+            "This is a bug; please report the polygon and settings used."
+        )
+    return solid
