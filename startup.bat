@@ -53,7 +53,7 @@ if not exist .env (
 
 :: 5) Launch backend and frontend in their own windows
 echo Starting backend on http://127.0.0.1:8020 ...
-start "TOPO2STL backend" cmd /k ".venv\Scripts\python.exe -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8020"
+start "TOPO2STL backend" cmd /k ".venv\Scripts\python.exe -m uvicorn main:app --app-dir backend --host 127.0.0.1 --port 8020 --reload --reload-dir backend"
 
 echo Starting frontend on http://localhost:5173 ...
 start "TOPO2STL frontend" cmd /k "cd frontend && npm run dev"
