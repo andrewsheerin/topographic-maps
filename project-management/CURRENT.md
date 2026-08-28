@@ -6,8 +6,8 @@
 
 ## Right now
 F-11 DONE (3-mode Area UI + TIGER picker; tests 17/17, verify green, RI+MA data fetched).
-F-12 DONE (hook paths absolute). startup.bat reworked @ 9ea0440. Full-state TIGER fetch may
-be running in background — rerun the script if it was interrupted.
+F-12 DONE (hook paths absolute). startup.bat reworked @ 9ea0440. Full TIGER dataset fetched:
+35,400 subdivisions, 51 states, 0 failures (data/tiger/subdivisions.gpkg, 68 MB).
 
 ## Blocked on
 Yours: C-1 (rotate API key), D-1/D-2, merging stacked branches
