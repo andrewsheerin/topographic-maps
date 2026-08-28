@@ -26,6 +26,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-17 | Base thickness in print millimetres (was real-world metres) — consistent with the page's other units | fix | C | DONE | 9d4f298 | User-directed unit change. Old 50 m default gave paper-thin bases at state scale (0.13 mm for RI). UI default 2 mm — user to confirm. |
 | F-18 | Remove the buffer-distance parameter | fix | C | DONE | 01fe0f3 | User approved. Field, API param, and pipeline buffer dropped; buffer(0) kept solely as validity normalization after reprojection. |
 | F-19 | Crop the mesh to the area boundary (state-shaped prints); STL always sealed — "Add base" checkbox removed | feature | C | DONE | d3d24a5 | Slicer can't slice the no-base open sheet; flat water plate wastes the bed. Walls along shoreline, islands = separate solids, DEM nodata holes stay visible. |
+| F-20 | RI state outline hits the watertight guard: diagonal (corner-touching) cells make the seal non-manifold | bug | C | WIP | | Pinch vertex → vertical wall edge shared by 4 faces. Fix: erode one cell of each diagonal pair before meshing. |
 
 ## Dropped
 

@@ -99,6 +99,31 @@ def carve_roads(dem, transform, gdf, scale_xy, z_scale, road_etch=None):
     return dem2
 
 
+def _remove_pinch_cells(cell_ok):
+    """Drop one cell of every diagonally-touching pair (F-20).
+
+    Two cells sharing only a corner put two boundary loops through the same
+    vertex; sealing then gives that corner's vertical wall edge four incident
+    faces — non-manifold, so the watertight guard rejects it. Eroding one cell
+    (one DEM pixel, invisible at print scale) restores manifoldness. Iterates
+    because a removal can expose a new diagonal pair; strictly monotone, so it
+    terminates."""
+    cell_ok = cell_ok.copy()
+    while True:
+        nw_se = (
+            cell_ok[:-1, :-1] & cell_ok[1:, 1:] & ~cell_ok[:-1, 1:] & ~cell_ok[1:, :-1]
+        )
+        ne_sw = (
+            cell_ok[:-1, 1:] & cell_ok[1:, :-1] & ~cell_ok[:-1, :-1] & ~cell_ok[1:, 1:]
+        )
+        if not (nw_se.any() or ne_sw.any()):
+            return cell_ok
+        drop = np.zeros_like(cell_ok)
+        drop[1:, 1:] |= nw_se  # drop the south-east cell of a NW/SE pair
+        drop[1:, :-1] |= ne_sw  # drop the south-west cell of a NE/SW pair
+        cell_ok &= ~drop
+
+
 def dem_to_mesh(dem, px_m, scale_xy, z_scale):
     """Convert a DEM (metres) to a triangular surface mesh in millimetres,
     cropped to the finite (in-boundary) cells.
@@ -148,9 +173,8 @@ def dem_to_mesh(dem, px_m, scale_xy, z_scale):
     # Two triangles per grid cell, vectorized (F-10), keeping only cells whose
     # four corners are all finite (F-19).
     idx = np.arange(h * w).reshape(h, w)
-    cell_ok = (
-        finite[:-1, :-1] & finite[:-1, 1:] & finite[1:, :-1] & finite[1:, 1:]
-    ).ravel()
+    cell_ok = finite[:-1, :-1] & finite[:-1, 1:] & finite[1:, :-1] & finite[1:, 1:]
+    cell_ok = _remove_pinch_cells(cell_ok).ravel()
     if not cell_ok.any():
         raise RuntimeError(
             "No complete grid cells inside the area — the area is too small for "

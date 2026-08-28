@@ -79,6 +79,29 @@ def test_normals_point_outward():
     assert np.all(top_normals[:, 2] > 0)
 
 
+def test_diagonal_pinch_cells_still_seal_watertight():
+    # Two cells touching only at a corner (F-20): the shared vertex would give
+    # the sealed wall a 4-face edge. One cell of the pair is eroded instead.
+    dem = np.full((3, 3), 10.0, dtype=np.float32)
+    dem[0, 2] = np.nan
+    dem[2, 0] = np.nan
+    solid = _solid(dem, thickness_mm=2.0)
+    assert solid.is_watertight
+    assert solid.is_winding_consistent
+
+
+def test_nan_speckle_fuzz_always_seals():
+    # Heavy random nodata speckle produces every boundary configuration there
+    # is, including chains of diagonal pinches. Must always seal.
+    rng = np.random.default_rng(3)
+    dem = rng.uniform(0.0, 300.0, size=(60, 60)).astype(np.float32)
+    dem[rng.random(dem.shape) < 0.35] = np.nan
+    solid = _solid(dem, thickness_mm=1.5)
+    assert solid.is_watertight
+    assert solid.is_winding_consistent
+    assert solid.volume > 0
+
+
 def test_zero_thickness_is_rejected():
     dem = np.full((3, 3), 5.0, dtype=np.float32)
     surface = dem_to_mesh(dem, PX_M, SCALE_XY, Z_SCALE)
