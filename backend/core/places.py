@@ -77,13 +77,12 @@ def _summary(row) -> dict:
 def query_places(
     state: str | None = None,
     q: str | None = None,
-    limit: int = 100,
-    offset: int = 0,
     gpkg_path: Path = SUBDIVISIONS_GPKG,
 ) -> list[dict]:
-    """Subdivisions filtered by state abbr and/or case-insensitive name search,
-    sorted by name then county, windowed by offset/limit. Raises FileNotFoundError
-    (with an actionable message) when the dataset hasn't been fetched."""
+    """ALL subdivisions matching the state abbr and/or case-insensitive name
+    search, sorted by name then county — no pagination (F-15); the UI shows the
+    complete list. Raises FileNotFoundError (with an actionable message) when
+    the dataset hasn't been fetched."""
     if not gpkg_path.exists():
         raise FileNotFoundError(MISSING_DATASET_MSG)
 
@@ -94,7 +93,7 @@ def query_places(
         gdf = gdf[
             gdf["name"].astype(str).str.contains(q, case=False, na=False, regex=False)
         ]
-    gdf = gdf.sort_values(["name", "county"]).iloc[offset : offset + int(limit)]
+    gdf = gdf.sort_values(["name", "county"])
 
     return [
         _summary(row)

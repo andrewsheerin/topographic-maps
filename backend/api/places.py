@@ -12,11 +12,9 @@ router = APIRouter(prefix="/api", tags=["places"])
 def list_places(
     state: str | None = Query(default=None, max_length=2),
     q: str | None = None,
-    limit: int = Query(default=100, ge=1, le=500),
-    offset: int = Query(default=0, ge=0),
 ):
     try:
-        return places.query_places(state=state, q=q, limit=limit, offset=offset)
+        return places.query_places(state=state, q=q)
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
 

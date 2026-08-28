@@ -92,14 +92,12 @@ export async function uploadBoundary(file) {
 }
 
 /**
- * GET /api/places -> list of place summaries (TIGER county subdivisions).
+ * GET /api/places -> ALL matching place summaries (TIGER county subdivisions).
  */
-export async function fetchPlaces({ state, q, limit = 100, offset = 0 }) {
+export async function fetchPlaces({ state, q }) {
   const params = new URLSearchParams();
   if (state) params.set('state', state);
   if (q) params.set('q', q);
-  params.set('limit', String(limit));
-  params.set('offset', String(offset));
 
   const res = await fetch(`/api/places?${params}`);
   const data = await res.json().catch(() => null);

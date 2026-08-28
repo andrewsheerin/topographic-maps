@@ -82,8 +82,3 @@
   font-size: var(--text-xs);
   white-space: nowrap;
 }
-
-.more {
-  font-size: var(--text-sm);
-  padding: var(--space-2) var(--space-4);
-}

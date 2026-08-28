@@ -58,11 +58,15 @@ def test_query_search_is_case_insensitive_substring(gpkg):
     assert [p["name"] for p in out] == ["Barnstable"]
 
 
-def test_query_pagination(gpkg):
-    first = query_places(limit=1, offset=0, gpkg_path=gpkg)
-    second = query_places(limit=1, offset=1, gpkg_path=gpkg)
-    assert len(first) == len(second) == 1
-    assert first[0]["geoid"] != second[0]["geoid"]
+def test_query_returns_all_matches(gpkg):
+    # F-15: no pagination — every match comes back, name-sorted.
+    out = query_places(gpkg_path=gpkg)
+    assert [p["name"] for p in out] == [
+        "Barnstable",
+        "Barrington",
+        "New Shoreham",
+        "Warren",
+    ]
 
 
 def test_summary_has_bbox_and_area(gpkg):
