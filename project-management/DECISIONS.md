@@ -65,6 +65,9 @@ One line each — what makes autonomous tiers auditable. Newest first.
 
 | Date | Decision | Why |
 | --- | --- | --- |
+| 2026-09-03 | Square-around-point (and circle) geometry computed frontend-side with the equirectangular approximation (111 320 m/°lat, cos-lat longitude), now shared in `lib/geometry.js` | Same approximation the circle tool shipped with (F-9); area-selection geometry, not reported output — flag if you want a projected-CRS exact square |
+| 2026-09-03 | Square draw tool constrains the drag in screen pixels (rectangle subclass) | Web Mercator is conformal, so a screen square ≈ ground square at these scales; exact squares come from the GPS form |
+| 2026-09-03 | DEM dropdown labels carry coverage notes (US only / global / SRTM+NASADEM 60°N–56°S) | Prevents sending a Canadian point to a US-only dataset; coverage limits are provider metadata — confirm the SRTM/NASADEM bounds |
 | 2026-08-28 | F-11 place picker uses TIGER **county subdivisions** (CB 2023 1:500k), not TIGER Places | Mirrors swpt-app D-28 — the user's own prior call there (Places leave unincorporated holes); flagged for override in the session summary |
 | 2026-08-28 | Ported swpt-app's bbox `area_km2` display approximation (111.320/110.574 km/deg) verbatim | Display-only picker metadata, already in use in the user's swpt-app; no scientific output touched |
 | 2026-08-28 | Renamed upload endpoint to `/api/upload-boundary` (was `/api/upload-shapefile`) | It now accepts GeoJSON too; our frontend is the only caller |
