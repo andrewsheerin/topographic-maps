@@ -65,6 +65,11 @@ One line each — what makes autonomous tiers auditable. Newest first.
 
 | Date | Decision | Why |
 | --- | --- | --- |
+| 2026-09-03 | Water fetch parses multipolygon relations (outers polygonized, inners subtracted) alongside closed ways | Mountain reservoirs are commonly relations; ways-only would miss them. Untagged natural=water stays excluded per the literal spec — flag if lakes go missing |
+| 2026-09-03 | Bundle's raw STL stays truly raw (no water); water applies to the carved mesh, plain STL, and 3MF | "Raw" keeps meaning uncarved reference geometry |
+| 2026-09-03 | Roads still carve across flattened lakes; only streams are lake-protected | The order spec protected streams only; causeway/bridge roads then still register |
+| 2026-09-03 | 3MF class sampled per grid cell: water if any corner pixel in a lake, else banded by the 4-corner mean elevation of the carved DEM | Cell = face resolution; carve deltas are negligible vs band thresholds; logged so sampling is auditable |
+| 2026-09-03 | 3MF base/walls take the object-default color = rock | Some palette entry must cover them; revisit if a dedicated base color is wanted |
 | 2026-09-03 | Square-around-point (and circle) geometry computed frontend-side with the equirectangular approximation (111 320 m/°lat, cos-lat longitude), now shared in `lib/geometry.js` | Same approximation the circle tool shipped with (F-9); area-selection geometry, not reported output — flag if you want a projected-CRS exact square |
 | 2026-09-03 | Square draw tool constrains the drag in screen pixels (rectangle subclass) | Web Mercator is conformal, so a screen square ≈ ground square at these scales; exact squares come from the GPS form |
 | 2026-09-03 | DEM dropdown labels carry coverage notes (US only / global / SRTM+NASADEM 60°N–56°S) | Prevents sending a Canadian point to a US-only dataset; coverage limits are provider metadata — confirm the SRTM/NASADEM bounds |
