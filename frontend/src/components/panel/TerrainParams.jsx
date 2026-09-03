@@ -11,8 +11,13 @@ export default function TerrainParams({ terrain, onChange }) {
           value={terrain.demDataset}
           onChange={(e) => onChange('demDataset', e.target.value)}
         >
-          <option value="USGS10m">USGS 10 m</option>
-          <option value="USGS30m">USGS 30 m</option>
+          <option value="USGS10m">USGS 10 m (US only)</option>
+          <option value="USGS30m">USGS 30 m (US only)</option>
+          <option value="COP30">Copernicus 30 m (global)</option>
+          <option value="COP90">Copernicus 90 m (global)</option>
+          <option value="SRTMGL1">SRTM 30 m (global, 60°N–56°S)</option>
+          <option value="NASADEM">NASADEM 30 m (global, 60°N–56°S)</option>
+          <option value="AW3D30">ALOS AW3D 30 m (global)</option>
         </select>
       </Field>
 
