@@ -83,7 +83,7 @@ def _apply_water(
     lakes_utm = water_mod.water_to_utm_clipped(lake_polys, epsg, poly_utm)
     streams_utm = water_mod.water_to_utm_clipped(stream_lines, epsg, poly_utm)
 
-    dem_arr, water_mask = mesh_mod.flatten_water(
+    dem_arr, lake_mask = mesh_mod.flatten_water(
         dem_arr,
         transform,
         list(lakes_utm.geometry),
@@ -91,7 +91,7 @@ def _apply_water(
         z_scale,
         water.get("recess_mm", constants.WATER_RECESS_MM),
     )
-    dem_arr = mesh_mod.carve_streams(
+    dem_arr, stream_mask = mesh_mod.carve_streams(
         dem_arr,
         transform,
         list(streams_utm.geometry),
@@ -99,9 +99,11 @@ def _apply_water(
         z_scale,
         water.get("stream_width_mm", constants.STREAM_WIDTH_MM),
         water.get("stream_depth_mm", constants.STREAM_DEPTH_MM),
-        protect_mask=water_mask,
+        protect_mask=lake_mask,
     )
-    return dem_arr, water_mask, lakes_utm, streams_utm
+    # Streams join the water color class (F-27) — carving still protects
+    # only the lake planes.
+    return dem_arr, lake_mask | stream_mask, lakes_utm, streams_utm
 
 
 def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):

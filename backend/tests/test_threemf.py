@@ -98,6 +98,27 @@ def test_all_four_classes_present_and_water_wins():
     assert np.all(cells[1, :] == 1)  # below treeline -> forest
 
 
+def test_carved_stream_cells_classify_as_water():
+    # F-27: the water mask passed to classification is lakes | streams, so a
+    # carved stream in the forest band prints in the water color.
+    from rasterio.transform import from_origin
+    from shapely.geometry import LineString
+
+    from core.mesh import carve_streams
+
+    dem = np.full((6, 6), 900.0, dtype=np.float32)
+    transform = from_origin(0.0, 60.0, 10.0, 10.0)
+    _, stream_mask = carve_streams(
+        dem, transform, [LineString([(0.0, 35.0), (60.0, 35.0)])],
+        0.001, 1.0, width_mm=1.0, depth_mm=0.4,
+    )
+    assert stream_mask.any()
+    cells = classify_terrain_cells(
+        dem, stream_mask, treeline_m=1200.0, snowline_m=2000.0
+    )
+    assert np.all(cells[stream_mask[:-1, :-1]] == 0)
+
+
 def test_classification_bands():
     dem = np.array(
         [[1000.0, 1000.0], [1500.0, 1500.0], [2500.0, 2500.0]], dtype=np.float32

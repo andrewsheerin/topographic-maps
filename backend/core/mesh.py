@@ -150,13 +150,17 @@ def carve_streams(
     Width/depth are print millimetres (ROAD_WIDTHS_MM convention) — a 10 m
     creek is under one extrusion width at typical print scale, so real-world
     widths are unusable. Cells in `protect_mask` (flattened lakes) are left
-    untouched so a stream never carves through its lake's plane."""
+    untouched so a stream never carves through its lake's plane.
+
+    Returns (new_dem, stream_mask); the mask is the carved cells, which join
+    the water color class in the 3MF (F-27)."""
     dem2 = dem.copy()
+    stream_mask = np.zeros(dem.shape, dtype=bool)
 
     width_mm = _finite_nonneg(width_mm, cap=constants.CARVE_WIDTH_CAP_MM)
     depth_mm = _finite_nonneg(depth_mm, cap=constants.CARVE_DEPTH_CAP_MM)
     if width_mm <= 0 or depth_mm <= 0 or len(stream_lines) == 0:
-        return dem2
+        return dem2, stream_mask
 
     delta = depth_mm / (scale_xy * z_scale * METERS_TO_MM)
     half_m = (width_mm / 2) / (scale_xy * METERS_TO_MM)
@@ -166,9 +170,9 @@ def carve_streams(
         if geom is not None and not geom.is_empty
     ]
     if not shapes:
-        return dem2
+        return dem2, stream_mask
 
-    mask = (
+    stream_mask = (
         features.rasterize(
             shapes,
             out_shape=dem2.shape,
@@ -180,10 +184,10 @@ def carve_streams(
         == 1
     ) & np.isfinite(dem2)
     if protect_mask is not None:
-        mask &= ~protect_mask
+        stream_mask &= ~protect_mask
 
-    dem2[mask] -= np.float32(delta)
-    return dem2
+    dem2[stream_mask] -= np.float32(delta)
+    return dem2, stream_mask
 
 
 def _remove_pinch_cells(cell_ok):

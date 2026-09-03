@@ -77,7 +77,7 @@ def test_stream_carves_outside_but_not_through_a_lake():
     # A stream straight across row 4 (y=155), through the middle of lake 1.
     stream = LineString([(0.0, 155.0), (200.0, 155.0)])
     # delta = 0.4 / (0.001 * 2.0 * 1000) = 0.2 m
-    dem3 = carve_streams(
+    dem3, stream_mask = carve_streams(
         dem2, TRANSFORM, [stream], SCALE_XY, Z_SCALE,
         width_mm=1.0, depth_mm=0.4, protect_mask=water_mask,
     )
@@ -86,6 +86,9 @@ def test_stream_carves_outside_but_not_through_a_lake():
     assert np.all(dem3[4, 7:] == np.float32(100.0 - 0.2))  # carved after lake
     assert np.all(dem3[4, 2:7] == lake_z)  # lake plane untouched
     assert np.all(dem3[5:, :] == dem2[5:, :])  # other rows untouched
+    # The mask is exactly the carved cells: row 4 minus the protected lake.
+    assert stream_mask[4, :2].all() and stream_mask[4, 7:].all()
+    assert not stream_mask[4, 2:7].any()
 
 
 def test_flatten_and_carve_still_seal_watertight():
@@ -97,7 +100,7 @@ def test_flatten_and_carve_still_seal_watertight():
     dem2, water_mask = flatten_water(
         dem, transform, [box(51.0, 51.0, 129.0, 129.0)], SCALE_XY, Z_SCALE, 0.6
     )
-    dem3 = carve_streams(
+    dem3, _ = carve_streams(
         dem2, transform, [LineString([(0.0, 90.0), (300.0, 210.0)])],
         SCALE_XY, Z_SCALE, width_mm=1.0, depth_mm=0.4, protect_mask=water_mask,
     )
