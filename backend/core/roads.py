@@ -52,16 +52,22 @@ def clip_line_features_to_area(features: list, area_wgs84) -> list:
 def _post_overpass(query: str, *, timeout_s: int = 60, max_retries: int = 3) -> dict:
     """POST an Overpass query with retries and endpoint fallback.
 
-    Overpass frequently returns 429/504 under load; retry with exponential
-    backoff and try alternate public endpoints. Returns parsed JSON on success.
+    Overpass frequently returns 429/504 under load; those retry with
+    exponential backoff. Connection-level failures (dead DNS, refused, hang)
+    mean the endpoint is down, not busy — fail fast to the next endpoint
+    instead of burning retries (F-24). Every endpoint's failure is reported,
+    not just the last one. Returns parsed JSON on success.
     """
-    last_err = None
+    errors: dict[str, Exception] = {}
 
     for endpoint in constants.OVERPASS_ENDPOINTS:
         for attempt in range(max_retries):
             try:
                 r = requests.post(
-                    endpoint, data=query.encode("utf-8"), timeout=timeout_s
+                    endpoint,
+                    data=query.encode("utf-8"),
+                    headers={"User-Agent": constants.OVERPASS_USER_AGENT},
+                    timeout=timeout_s,
                 )
                 r.raise_for_status()
                 try:
@@ -72,14 +78,22 @@ def _post_overpass(query: str, *, timeout_s: int = 60, max_retries: int = 3) -> 
                         f"Overpass returned non-JSON response from {endpoint}. "
                         f"First 200 chars: {(r.text or '')[:200]}"
                     ) from je
+            except (
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+            ) as e:
+                errors[endpoint] = e
+                break  # endpoint unreachable — try the next one immediately
             except Exception as e:
-                last_err = e
-                time.sleep(2**attempt)
+                errors[endpoint] = e
+                if attempt < max_retries - 1:
+                    time.sleep(2**attempt)
 
+    detail = " | ".join(f"{ep}: {err}" for ep, err in errors.items())
     raise RuntimeError(
-        "Overpass request failed after retries. This is usually temporary (server load). "
-        "Try again, reduce road detail, or use a smaller polygon. "
-        f"Last error: {last_err}"
+        "Overpass request failed on every endpoint. This is usually temporary "
+        "(server load). Try again, reduce road detail, or use a smaller "
+        f"polygon. Errors: {detail}"
     )
 
 

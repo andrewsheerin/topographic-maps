@@ -65,6 +65,8 @@ One line each — what makes autonomous tiers auditable. Newest first.
 
 | Date | Decision | Why |
 | --- | --- | --- |
+| 2026-09-03 | Overpass requests send `TOPO2STL/1.0 (personal terrain-print app)` as User-Agent; no contact email included | OSM policy wants an identifying UA (overpass-api.de 406-blocks the requests default); left your email out of the repo — add it to the UA string if you prefer |
+| 2026-09-03 | Overpass connection/timeout failures skip to the next endpoint immediately; retries+backoff reserved for HTTP-level errors | A dead or hanging endpoint isn't "load"; retrying it burned ~3.5 min before the user saw an error |
 | 2026-09-03 | Water fetch parses multipolygon relations (outers polygonized, inners subtracted) alongside closed ways | Mountain reservoirs are commonly relations; ways-only would miss them. Untagged natural=water stays excluded per the literal spec — flag if lakes go missing |
 | 2026-09-03 | Bundle's raw STL stays truly raw (no water); water applies to the carved mesh, plain STL, and 3MF | "Raw" keeps meaning uncarved reference geometry |
 | 2026-09-03 | Roads still carve across flattened lakes; only streams are lake-protected | The order spec protected streams only; causeway/bridge roads then still register |

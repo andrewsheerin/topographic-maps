@@ -94,8 +94,12 @@ USGSDEM_DATASETS = {"USGS10m", "USGS30m"}
 # --- Overpass (OSM roads) ------------------------------------------------
 
 # Public Overpass endpoints, tried in order with retries (see core.roads).
+# overpass.nchc.org.tw removed 2026-09-03 (F-24): its DNS no longer resolves.
 OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass.nchc.org.tw/api/interpreter",
 ]
+
+# Identifying User-Agent per OSM usage policy. overpass-api.de rejects the
+# default python-requests agent with HTTP 406 (verified 2026-09-03, F-24).
+OVERPASS_USER_AGENT = "TOPO2STL/1.0 (personal terrain-print app)"
