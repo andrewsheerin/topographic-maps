@@ -37,7 +37,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 
 | F-26 | Overpass rate-limit hygiene: a 3MF click fired 3 queries back-to-back (lakes, streams, roads) and quick retries → 429s | fix | C | DONE | 44b24b1 | Found retesting F-24: water fetch succeeded, roads then 429'd. Lakes+streams merged into one query; 429 retries honor Retry-After (min 10 s). F-25's opt-in toggles remove the unwanted roads fetch itself. |
 
-| F-27 | Streams print in the water color in the 3MF (revisits the F-23 tradeoff) | fix | C | WIP | | User saw the Bambu preview 2026-09-03 and chose color despite the extra AMS swaps. Carved stream cells join the water class; lake-protection logic unchanged. |
+| F-27 | Streams print in the water color in the 3MF (revisits the F-23 tradeoff) | fix | C | DONE | 47334f8 | User saw the Bambu preview 2026-09-03 and chose color despite the extra AMS swaps. Carved stream cells join the water class; lake-protection logic unchanged. |
 
 ## Dropped
 
