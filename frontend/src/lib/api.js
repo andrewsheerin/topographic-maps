@@ -51,6 +51,23 @@ export async function generateStl(body) {
 }
 
 /**
+ * POST /api/generate-3mf -> binary colored-3MF blob.
+ */
+export async function generate3mf(body) {
+  const res = await fetch('/api/generate-3mf', {
+    method: 'POST',
+    headers: JSON_HEADERS,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || '3MF generation failed.');
+  }
+  return res.blob();
+}
+
+/**
  * POST /api/generate-bundle -> binary ZIP blob.
  */
 export async function generateBundle(body) {

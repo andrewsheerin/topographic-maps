@@ -3,7 +3,7 @@ as named; see `.claude/rules/science-integrity.md` (units are explicit)."""
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import constants
 
@@ -46,6 +46,29 @@ class GenerateRequest(BaseModel):
     road_levels: list[str] = []
     road_etch: RoadEtchParams = RoadEtchParams()
     water: WaterParams = WaterParams()
+
+
+_HEX = r"^#[0-9A-Fa-f]{6}$"
+
+
+class ColorParams(BaseModel):
+    """The 3MF palette in class order (F-23). All required — no default
+    colors are chosen here."""
+
+    water: str = Field(pattern=_HEX)
+    forest: str = Field(pattern=_HEX)
+    rock: str = Field(pattern=_HEX)
+    snow: str = Field(pattern=_HEX)
+
+
+class Generate3MFRequest(GenerateRequest):
+    """Colored 3MF export (F-23). treeline_m and snowline_m are scientific
+    per-request values (they vary by mountain range) — required, no defaults
+    (science-integrity)."""
+
+    treeline_m: float
+    snowline_m: float
+    colors: ColorParams
 
 
 class RoadsRequest(BaseModel):

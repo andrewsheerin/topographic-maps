@@ -41,6 +41,17 @@ const DEFAULT_WATER = {
   streamDepth: '0.4',
 };
 
+// 3MF science fields are deliberately empty: treeline/snowline and the palette
+// vary by mountain range, so the user supplies them per print (F-23).
+const DEFAULT_COLOR_3MF = {
+  treeline: '',
+  snowline: '',
+  water: '',
+  forest: '',
+  rock: '',
+  snow: '',
+};
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -62,6 +73,7 @@ export default function Generator() {
   const [terrain, setTerrain] = useState(DEFAULT_TERRAIN);
   const [roads, setRoads] = useState(DEFAULT_ROADS);
   const [water, setWater] = useState(DEFAULT_WATER);
+  const [color3mf, setColor3mf] = useState(DEFAULT_COLOR_3MF);
 
   const updateTerrain = useCallback((key, value) => {
     setTerrain((t) => ({ ...t, [key]: value }));
@@ -69,6 +81,10 @@ export default function Generator() {
 
   const updateWater = useCallback((key, value) => {
     setWater((w) => ({ ...w, [key]: value }));
+  }, []);
+
+  const updateColor3mf = useCallback((key, value) => {
+    setColor3mf((c) => ({ ...c, [key]: value }));
   }, []);
 
   const updateRoad = useCallback((key, field, value) => {
@@ -245,6 +261,32 @@ export default function Generator() {
     }
   }, [polygon, buildParams]);
 
+  const handleGenerate3mf = useCallback(async () => {
+    if (!polygon) {
+      setStatus('Set an area first — draw, upload, or pick a city/town.');
+      return;
+    }
+    setStatus('Generating colored 3MF...');
+    try {
+      const blob = await api.generate3mf({
+        polygon_geojson: polygon,
+        ...buildParams(),
+        treeline_m: Number(color3mf.treeline),
+        snowline_m: Number(color3mf.snowline),
+        colors: {
+          water: color3mf.water,
+          forest: color3mf.forest,
+          rock: color3mf.rock,
+          snow: color3mf.snow,
+        },
+      });
+      downloadBlob(blob, 'terrain.3mf');
+      setStatus('3MF downloaded.');
+    } catch (err) {
+      setStatus(err.message);
+    }
+  }, [polygon, buildParams, color3mf]);
+
   const handleGenerateBundle = useCallback(async () => {
     if (!polygon) {
       setStatus('Set an area first — draw, upload, or pick a city/town.');
@@ -294,6 +336,9 @@ export default function Generator() {
           onGenerateStl={handleGenerateStl}
           onGenerateBundle={handleGenerateBundle}
           bundleDisabled={selectedRoadLevels.length === 0}
+          color3mf={color3mf}
+          onColorChange={updateColor3mf}
+          onGenerate3mf={handleGenerate3mf}
           status={status}
         />
       </aside>

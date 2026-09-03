@@ -211,6 +211,49 @@ def _remove_pinch_cells(cell_ok):
         cell_ok &= ~drop
 
 
+def cell_ok_mask(dem):
+    """The (h-1, w-1) mask of grid cells that become faces: all four corners
+    finite (F-19), diagonal pinches eroded (F-20). Shared by dem_to_mesh and
+    the 3MF face classification (F-23) so face count and order always agree."""
+    finite = np.isfinite(dem)
+    cell_ok = finite[:-1, :-1] & finite[:-1, 1:] & finite[1:, :-1] & finite[1:, 1:]
+    return _remove_pinch_cells(cell_ok)
+
+
+def classify_terrain_cells(dem, water_mask, treeline_m, snowline_m):
+    """Per-cell color class for the 3MF export (F-23), priority order:
+      0 water  — any corner pixel inside a lake polygon (elevation-independent)
+      1 forest — else, cell mean elevation below treeline_m
+      2 rock   — else, below snowline_m
+      3 snow   — else
+    treeline_m and snowline_m are per-request user values (science-integrity:
+    they vary by mountain range and are never defaulted here)."""
+    mean_m = (dem[:-1, :-1] + dem[:-1, 1:] + dem[1:, :-1] + dem[1:, 1:]) / 4.0
+    cls = np.full(mean_m.shape, 3, dtype=np.int16)
+    cls[mean_m < float(snowline_m)] = 2
+    cls[mean_m < float(treeline_m)] = 1
+    if water_mask is not None:
+        water_cell = (
+            water_mask[:-1, :-1]
+            | water_mask[:-1, 1:]
+            | water_mask[1:, :-1]
+            | water_mask[1:, 1:]
+        )
+        cls[water_cell] = 0
+    return cls
+
+
+def face_classes_for_solid(dem, cell_classes, n_solid_faces):
+    """Per-face classes aligned with dem_to_mesh + add_base face order:
+    [cell triangles A, cell triangles B, bottom, walls]. Base and wall faces
+    get -1 — the 3MF object-level default color."""
+    ok = cell_ok_mask(dem).ravel()
+    c = cell_classes.ravel()[ok]
+    surface = np.concatenate([c, c])
+    base = np.full(n_solid_faces - len(surface), -1, dtype=surface.dtype)
+    return np.concatenate([surface, base])
+
+
 def dem_to_mesh(dem, px_m, scale_xy, z_scale):
     """Convert a DEM (metres) to a triangular surface mesh in millimetres,
     cropped to the finite (in-boundary) cells.
@@ -260,8 +303,7 @@ def dem_to_mesh(dem, px_m, scale_xy, z_scale):
     # Two triangles per grid cell, vectorized (F-10), keeping only cells whose
     # four corners are all finite (F-19).
     idx = np.arange(h * w).reshape(h, w)
-    cell_ok = finite[:-1, :-1] & finite[:-1, 1:] & finite[1:, :-1] & finite[1:, 1:]
-    cell_ok = _remove_pinch_cells(cell_ok).ravel()
+    cell_ok = cell_ok_mask(dem).ravel()
     if not cell_ok.any():
         raise RuntimeError(
             "No complete grid cells inside the area — the area is too small for "

@@ -1,4 +1,6 @@
 from .schemas import (
+    ColorParams,
+    Generate3MFRequest,
     GenerateRequest,
     RoadEtch,
     RoadEtchParams,
@@ -7,6 +9,8 @@ from .schemas import (
 )
 
 __all__ = [
+    "ColorParams",
+    "Generate3MFRequest",
     "GenerateRequest",
     "RoadEtch",
     "RoadEtchParams",

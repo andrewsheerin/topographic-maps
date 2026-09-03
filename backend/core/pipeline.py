@@ -14,6 +14,7 @@ import constants
 from core import dem as dem_mod
 from core import mesh as mesh_mod
 from core import roads as roads_mod
+from core import threemf as threemf_mod
 from core import water as water_mod
 from core.geometry import utm_epsg_from_lon_lat
 
@@ -131,6 +132,79 @@ def generate_stl_from_polygon(
     return out
 
 
+def _fetch_and_carve_roads(
+    dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale,
+    road_levels, road_etch,
+):
+    """Fetch roads and carve them into the DEM; returns (dem, roads_gdf_utm)."""
+    roads_fc_wgs84 = roads_mod.fetch_roads_geojson_overpass(polygon_wgs84, road_levels)
+    gdf_roads_utm = gpd.GeoDataFrame.from_features(
+        roads_fc_wgs84.get("features", []),
+        crs="EPSG:4326",
+    ).to_crs(epsg)
+    gdf_roads_utm = roads_mod.clip_roads_gdf_to_polygon(gdf_roads_utm, poly_utm)
+    dem_arr = mesh_mod.carve_roads(
+        dem_arr, transform, gdf_roads_utm, scale_xy, z_scale, road_etch=road_etch
+    )
+    return dem_arr, gdf_roads_utm
+
+
+def generate_3mf_from_polygon(
+    polygon_wgs84,
+    dem_dataset,
+    downsample,
+    z_scale,
+    target_max_mm,
+    base_thickness_mm,
+    treeline_m,
+    snowline_m,
+    colors_hex,
+    road_levels=None,
+    road_etch=None,
+    water=None,
+):
+    """Colored 3MF export (F-23): the same terrain pipeline as the STL, plus a
+    per-face class raster written via the 3MF Materials extension.
+
+    colors_hex is [water, forest, rock, snow] in class order; treeline_m and
+    snowline_m are per-request user values. Streams and roads carve geometry
+    but carry no color in this version (register F-23 notes the tradeoff);
+    base and walls take the object default (rock)."""
+    tmp = tempfile.mkdtemp()
+    dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
+        polygon_wgs84, dem_dataset, downsample, tmp
+    )
+    scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
+
+    dem_arr, water_mask = _apply_water(
+        dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
+    )
+    if road_levels:
+        dem_arr, _ = _fetch_and_carve_roads(
+            dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale,
+            road_levels, road_etch,
+        )
+
+    surface = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
+    solid = mesh_mod.add_base(surface, float(base_thickness_mm))
+
+    cell_cls = mesh_mod.classify_terrain_cells(
+        dem_arr, water_mask, treeline_m, snowline_m
+    )
+    face_cls = mesh_mod.face_classes_for_solid(dem_arr, cell_cls, len(solid.faces))
+
+    out = os.path.join(tmp, "terrain.3mf")
+    threemf_mod.write_3mf(
+        out,
+        solid.vertices,
+        solid.faces,
+        face_cls,
+        colors_hex,
+        default_index=2,  # base/walls print in the rock color
+    )
+    return out
+
+
 def generate_bundle_from_polygon(
     polygon_wgs84,
     dem_dataset,
@@ -148,22 +222,6 @@ def generate_bundle_from_polygon(
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 
-    # Roads: fetch in WGS84, reproject + clip to the terrain footprint in UTM.
-    roads_fc_wgs84 = roads_mod.fetch_roads_geojson_overpass(polygon_wgs84, road_levels)
-    gdf_roads_utm = gpd.GeoDataFrame.from_features(
-        roads_fc_wgs84.get("features", []),
-        crs="EPSG:4326",
-    ).to_crs(epsg)
-    gdf_roads_utm = roads_mod.clip_roads_gdf_to_polygon(gdf_roads_utm, poly_utm)
-
-    roads_fc_utm = {
-        "type": "FeatureCollection",
-        "features": json.loads(gdf_roads_utm.to_json()).get("features", []),
-        "crs": {"type": "name", "properties": {"name": f"EPSG:{epsg}"}},
-    }
-    roads_geojson_utm_path = os.path.join(tmp, "roads_centerlines_utm.geojson")
-    roads_mod.write_roads_geojson(roads_fc_utm, roads_geojson_utm_path)
-
     # Raw mesh — no water, no roads.
     raw_mesh = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
     raw_mesh = mesh_mod.add_base(raw_mesh, float(base_thickness_mm))
@@ -175,9 +233,18 @@ def generate_bundle_from_polygon(
     watered_dem, _ = _apply_water(
         dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
     )
-    carved_dem = mesh_mod.carve_roads(
-        watered_dem, transform, gdf_roads_utm, scale_xy, z_scale, road_etch=road_etch
+    carved_dem, gdf_roads_utm = _fetch_and_carve_roads(
+        watered_dem, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale,
+        road_levels, road_etch,
     )
+
+    roads_fc_utm = {
+        "type": "FeatureCollection",
+        "features": json.loads(gdf_roads_utm.to_json()).get("features", []),
+        "crs": {"type": "name", "properties": {"name": f"EPSG:{epsg}"}},
+    }
+    roads_geojson_utm_path = os.path.join(tmp, "roads_centerlines_utm.geojson")
+    roads_mod.write_roads_geojson(roads_fc_utm, roads_geojson_utm_path)
     carved_mesh = mesh_mod.dem_to_mesh(carved_dem, px_m, scale_xy, z_scale)
     carved_mesh = mesh_mod.add_base(carved_mesh, float(base_thickness_mm))
     carved_stl = os.path.join(tmp, "terrain_with_roads_recess.stl")
