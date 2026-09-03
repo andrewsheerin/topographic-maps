@@ -22,6 +22,7 @@ def generate_stl(req: GenerateRequest):
             z_scale=req.z_scale,
             target_max_mm=req.target_max_mm,
             base_thickness_mm=req.base_thickness_mm,
+            water=req.water.model_dump(),
         )
         return FileResponse(path, filename="terrain.stl", media_type="application/sla")
     except RuntimeError as e:
@@ -43,6 +44,7 @@ def generate_bundle(req: GenerateRequest):
             base_thickness_mm=req.base_thickness_mm,
             road_levels=req.road_levels,
             road_etch=req.road_etch.model_dump(),
+            water=req.water.model_dump(),
         )
         return FileResponse(
             zip_path, filename="terrain_bundle.zip", media_type="application/zip"

@@ -83,23 +83,27 @@ def _post_overpass(query: str, *, timeout_s: int = 60, max_retries: int = 3) -> 
     )
 
 
+def overpass_poly_str(area_wgs84) -> str:
+    """The `poly:` filter string for an Overpass query.
+
+    Overpass polygons must be fairly short or the query times out; downsample
+    a dense ring to keep the query cheap. Shared with core.water (F-22)."""
+    coords = outer_ring_coords(area_wgs84)
+    if len(coords) > 300:
+        step = max(1, len(coords) // 300)
+        coords = coords[::step]
+        if coords[0] != coords[-1]:
+            coords.append(coords[0])
+    return " ".join(f"{lat} {lon}" for lon, lat in coords)
+
+
 def fetch_roads_geojson_overpass(polygon_wgs84, highway_levels):
     """Return an EPSG:4326 FeatureCollection of road centerlines within the
     polygon for the requested highway classes."""
     if not highway_levels:
         return {"type": "FeatureCollection", "features": []}
 
-    coords = outer_ring_coords(polygon_wgs84)
-
-    # Overpass polygons must be fairly short or the query times out; downsample
-    # a dense ring to keep the query cheap.
-    if len(coords) > 300:
-        step = max(1, len(coords) // 300)
-        coords = coords[::step]
-        if coords[0] != coords[-1]:
-            coords.append(coords[0])
-
-    poly_str = " ".join(f"{lat} {lon}" for lon, lat in coords)
+    poly_str = overpass_poly_str(polygon_wgs84)
     hw = "|".join(highway_levels)
 
     query = f"""

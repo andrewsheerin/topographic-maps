@@ -3,6 +3,7 @@ from .schemas import (
     RoadEtch,
     RoadEtchParams,
     RoadsRequest,
+    WaterParams,
 )
 
 __all__ = [
@@ -10,4 +11,5 @@ __all__ = [
     "RoadEtch",
     "RoadEtchParams",
     "RoadsRequest",
+    "WaterParams",
 ]

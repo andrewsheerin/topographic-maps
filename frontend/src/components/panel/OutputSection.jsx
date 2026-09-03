@@ -9,7 +9,7 @@ export default function OutputSection({
 }) {
   return (
     <section>
-      <h2>4. Output</h2>
+      <h2>5. Output</h2>
 
       <div className={styles.row}>
         <Button variant="primary" onClick={onGenerateStl}>

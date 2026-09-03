@@ -4,6 +4,7 @@ import MapView from '../../components/MapView/MapView.jsx';
 import AreaSection from '../../components/panel/AreaSection.jsx';
 import TerrainParams from '../../components/panel/TerrainParams.jsx';
 import RoadsSection from '../../components/panel/RoadsSection.jsx';
+import WaterSection from '../../components/panel/WaterSection.jsx';
 import OutputSection from '../../components/panel/OutputSection.jsx';
 import * as api from '../../lib/api.js';
 import { squareAroundPoint } from '../../lib/geometry.js';
@@ -31,6 +32,15 @@ const DEFAULT_ROADS = ROAD_CLASSES.reduce((acc, c) => {
   return acc;
 }, {});
 
+// Water defaults mirror backend constants (user-provided 2026-09-03).
+const DEFAULT_WATER = {
+  lakes: false,
+  streams: false,
+  recess: '0.6',
+  streamWidth: '1.0',
+  streamDepth: '0.4',
+};
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -51,9 +61,14 @@ export default function Generator() {
   const [status, setStatus] = useState('');
   const [terrain, setTerrain] = useState(DEFAULT_TERRAIN);
   const [roads, setRoads] = useState(DEFAULT_ROADS);
+  const [water, setWater] = useState(DEFAULT_WATER);
 
   const updateTerrain = useCallback((key, value) => {
     setTerrain((t) => ({ ...t, [key]: value }));
+  }, []);
+
+  const updateWater = useCallback((key, value) => {
+    setWater((w) => ({ ...w, [key]: value }));
   }, []);
 
   const updateRoad = useCallback((key, field, value) => {
@@ -90,8 +105,15 @@ export default function Generator() {
       base_thickness_mm: Number(terrain.baseThicknessMm || 2),
       road_levels: selectedRoadLevels,
       road_etch,
+      water: {
+        lakes: water.lakes,
+        streams: water.streams,
+        recess_mm: Number(water.recess || 0),
+        stream_width_mm: Number(water.streamWidth || 0),
+        stream_depth_mm: Number(water.streamDepth || 0),
+      },
     };
-  }, [terrain, roads, selectedRoadLevels]);
+  }, [terrain, roads, selectedRoadLevels, water]);
 
   /* ---------------- polygon ---------------- */
 
@@ -265,6 +287,8 @@ export default function Generator() {
           onLoadRoads={handleLoadRoads}
           onClearRoads={handleClearRoads}
         />
+
+        <WaterSection water={water} onChange={updateWater} />
 
         <OutputSection
           onGenerateStl={handleGenerateStl}

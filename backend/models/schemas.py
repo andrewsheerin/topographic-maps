@@ -5,10 +5,23 @@ from typing import Any
 
 from pydantic import BaseModel
 
+import constants
+
 
 class RoadEtch(BaseModel):
     width_mm: float = 0.0
     depth_mm: float = 0.0
+
+
+class WaterParams(BaseModel):
+    """Lake flattening + stream carving (F-22). Depth/width are print mm;
+    defaults come from constants (user-provided 2026-09-03)."""
+
+    lakes: bool = False
+    streams: bool = False
+    recess_mm: float = constants.WATER_RECESS_MM
+    stream_width_mm: float = constants.STREAM_WIDTH_MM
+    stream_depth_mm: float = constants.STREAM_DEPTH_MM
 
 
 class RoadEtchParams(BaseModel):
@@ -32,6 +45,7 @@ class GenerateRequest(BaseModel):
     base_thickness_mm: float  # print millimetres (F-17); STL is always sealed (F-19)
     road_levels: list[str] = []
     road_etch: RoadEtchParams = RoadEtchParams()
+    water: WaterParams = WaterParams()
 
 
 class RoadsRequest(BaseModel):

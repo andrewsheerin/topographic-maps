@@ -39,6 +39,27 @@ RECESS_DEPTH_MM = 2.0
 CARVE_WIDTH_CAP_MM = 50.0
 CARVE_DEPTH_CAP_MM = 20.0
 
+# --- Water: lakes + streams (F-22) ---------------------------------------
+
+# Lake-surface recess below each lake's flattened plane, print mm.
+# Source: user-provided 2026-09-03.
+WATER_RECESS_MM = 0.6
+
+# Stream carve width/depth, print mm — same convention as ROAD_WIDTHS_MM: real
+# stream widths are far below one extrusion width at print scale, so print-mm
+# values are used instead. Source: user-provided 2026-09-03.
+STREAM_WIDTH_MM = 1.0
+STREAM_DEPTH_MM = 0.4
+
+# Percentile of the in-polygon DEM samples used as a lake's plane elevation.
+# COP30 is radar-derived and noisy/void over open water; a low percentile
+# rejects shoreline and noise highs. Source: user spec 2026-09-03.
+WATER_LEVEL_PERCENTILE = 10
+
+# OSM tag selections for water features. Source: user spec 2026-09-03.
+WATER_POLYGON_VALUES = ("lake", "reservoir", "pond")  # natural=water + water=…
+WATERWAY_VALUES = ("stream", "river")  # waterway=…
+
 # --- Mesh / print guards -------------------------------------------------
 
 # Maximum vertical exaggeration accepted; higher values are clamped.

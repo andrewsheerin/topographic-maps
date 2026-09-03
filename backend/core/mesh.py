@@ -99,6 +99,93 @@ def carve_roads(dem, transform, gdf, scale_xy, z_scale, road_etch=None):
     return dem2
 
 
+def flatten_water(dem, transform, water_polys, scale_xy, z_scale, recess_mm):
+    """Flatten each water polygon to its own plane, recessed below shore (F-22).
+
+    COP30 is radar-derived and its returns over open water are noise or voids,
+    so lake surfaces are not planar in the source raster. Each polygon is
+    rasterized SEPARATELY and set to the WATER_LEVEL_PERCENTILE of the original
+    DEM inside it, minus the print-mm recess — lakes at different elevations
+    each get their own plane; there is no global water elevation.
+
+    Returns (new_dem, water_mask); the mask protects streams from carving
+    through a lake plane and feeds the 3MF face classification (F-23)."""
+    dem2 = dem.copy()
+    water_mask = np.zeros(dem.shape, dtype=bool)
+
+    recess_mm = _finite_nonneg(recess_mm, cap=constants.CARVE_DEPTH_CAP_MM)
+    delta = recess_mm / (scale_xy * z_scale * METERS_TO_MM)
+
+    for geom in water_polys:
+        if geom is None or geom.is_empty:
+            continue
+        mask = (
+            features.rasterize(
+                [(geom, 1)],
+                out_shape=dem.shape,
+                transform=transform,
+                fill=0,
+                dtype=np.uint8,
+                all_touched=True,
+            )
+            == 1
+        ) & np.isfinite(dem)
+        if not mask.any():
+            continue
+        plane_m = float(
+            np.percentile(dem[mask], constants.WATER_LEVEL_PERCENTILE)
+        )
+        dem2[mask] = np.float32(plane_m - delta)
+        water_mask |= mask
+
+    return dem2, water_mask
+
+
+def carve_streams(
+    dem, transform, stream_lines, scale_xy, z_scale, width_mm, depth_mm,
+    protect_mask=None,
+):
+    """Recess buffered waterway centerlines into the DEM (F-22).
+
+    Width/depth are print millimetres (ROAD_WIDTHS_MM convention) — a 10 m
+    creek is under one extrusion width at typical print scale, so real-world
+    widths are unusable. Cells in `protect_mask` (flattened lakes) are left
+    untouched so a stream never carves through its lake's plane."""
+    dem2 = dem.copy()
+
+    width_mm = _finite_nonneg(width_mm, cap=constants.CARVE_WIDTH_CAP_MM)
+    depth_mm = _finite_nonneg(depth_mm, cap=constants.CARVE_DEPTH_CAP_MM)
+    if width_mm <= 0 or depth_mm <= 0 or len(stream_lines) == 0:
+        return dem2
+
+    delta = depth_mm / (scale_xy * z_scale * METERS_TO_MM)
+    half_m = (width_mm / 2) / (scale_xy * METERS_TO_MM)
+    shapes = [
+        (geom.buffer(half_m), 1)
+        for geom in stream_lines
+        if geom is not None and not geom.is_empty
+    ]
+    if not shapes:
+        return dem2
+
+    mask = (
+        features.rasterize(
+            shapes,
+            out_shape=dem2.shape,
+            transform=transform,
+            fill=0,
+            dtype=np.uint8,
+            all_touched=True,
+        )
+        == 1
+    ) & np.isfinite(dem2)
+    if protect_mask is not None:
+        mask &= ~protect_mask
+
+    dem2[mask] -= np.float32(delta)
+    return dem2
+
+
 def _remove_pinch_cells(cell_ok):
     """Drop one cell of every diagonally-touching pair (F-20).
 

@@ -14,6 +14,7 @@ import constants
 from core import dem as dem_mod
 from core import mesh as mesh_mod
 from core import roads as roads_mod
+from core import water as water_mod
 from core.geometry import utm_epsg_from_lon_lat
 
 METERS_TO_MM = constants.METERS_TO_MM
@@ -63,6 +64,44 @@ def _scale_xy_from_extent(dem_arr, transform, target_max_mm):
     return float(target_max_mm) / (max_dim_m * METERS_TO_MM)
 
 
+def _apply_water(
+    dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
+):
+    """Fetch water and apply it to the DEM (F-22): flatten each lake to its own
+    plane first, then carve streams (lakes protected). Returns
+    (dem, water_mask); water_mask is None when water is disabled."""
+    if not water or not (water.get("lakes") or water.get("streams")):
+        return dem_arr, None
+
+    lake_polys, stream_lines = water_mod.fetch_water_overpass(
+        polygon_wgs84,
+        lakes=bool(water.get("lakes")),
+        streams=bool(water.get("streams")),
+    )
+    lakes_utm = water_mod.water_to_utm_clipped(lake_polys, epsg, poly_utm)
+    streams_utm = water_mod.water_to_utm_clipped(stream_lines, epsg, poly_utm)
+
+    dem_arr, water_mask = mesh_mod.flatten_water(
+        dem_arr,
+        transform,
+        list(lakes_utm.geometry),
+        scale_xy,
+        z_scale,
+        water.get("recess_mm", constants.WATER_RECESS_MM),
+    )
+    dem_arr = mesh_mod.carve_streams(
+        dem_arr,
+        transform,
+        list(streams_utm.geometry),
+        scale_xy,
+        z_scale,
+        water.get("stream_width_mm", constants.STREAM_WIDTH_MM),
+        water.get("stream_depth_mm", constants.STREAM_DEPTH_MM),
+        protect_mask=water_mask,
+    )
+    return dem_arr, water_mask
+
+
 def generate_stl_from_polygon(
     polygon_wgs84,
     dem_dataset,
@@ -70,12 +109,17 @@ def generate_stl_from_polygon(
     z_scale,
     target_max_mm,
     base_thickness_mm,
+    water=None,
 ):
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
         polygon_wgs84, dem_dataset, downsample, tmp
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
+
+    dem_arr, _ = _apply_water(
+        dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
+    )
 
     # The STL is always a sealed solid (F-19) — an open surface can't be
     # sliced. base_thickness_mm is a print dimension (F-17), like road etch.
@@ -96,6 +140,7 @@ def generate_bundle_from_polygon(
     base_thickness_mm,
     road_levels,
     road_etch=None,
+    water=None,
 ):
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
@@ -119,15 +164,19 @@ def generate_bundle_from_polygon(
     roads_geojson_utm_path = os.path.join(tmp, "roads_centerlines_utm.geojson")
     roads_mod.write_roads_geojson(roads_fc_utm, roads_geojson_utm_path)
 
-    # Raw mesh.
+    # Raw mesh — no water, no roads.
     raw_mesh = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
     raw_mesh = mesh_mod.add_base(raw_mesh, float(base_thickness_mm))
     raw_stl = os.path.join(tmp, "terrain_raw.stl")
     raw_mesh.export(raw_stl)
 
-    # Carved mesh.
+    # Carved mesh: lakes flatten first, streams carve around them (F-22),
+    # then roads carve last.
+    watered_dem, _ = _apply_water(
+        dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
+    )
     carved_dem = mesh_mod.carve_roads(
-        dem_arr, transform, gdf_roads_utm, scale_xy, z_scale, road_etch=road_etch
+        watered_dem, transform, gdf_roads_utm, scale_xy, z_scale, road_etch=road_etch
     )
     carved_mesh = mesh_mod.dem_to_mesh(carved_dem, px_m, scale_xy, z_scale)
     carved_mesh = mesh_mod.add_base(carved_mesh, float(base_thickness_mm))
