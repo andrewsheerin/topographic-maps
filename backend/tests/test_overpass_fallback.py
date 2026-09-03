@@ -64,3 +64,63 @@ def test_http_errors_still_retry_with_backoff(monkeypatch):
 def test_no_dead_endpoints_configured():
     # overpass.nchc.org.tw was decommissioned (DNS gone) — keep it out.
     assert all("nchc" not in ep for ep in constants.OVERPASS_ENDPOINTS)
+
+
+def test_429_honors_retry_after(monkeypatch):
+    sleeps = []
+
+    class _Resp429:
+        status_code = 429
+        headers = {"Retry-After": "17"}
+
+    def fake_post(endpoint, **kwargs):
+        err = requests.exceptions.HTTPError("429 Too Many Requests")
+        err.response = _Resp429()
+        raise err
+
+    monkeypatch.setattr(roads.requests, "post", fake_post)
+    monkeypatch.setattr(roads.time, "sleep", sleeps.append)
+
+    with pytest.raises(RuntimeError):
+        roads._post_overpass("q", max_retries=2)
+
+    # One sleep per endpoint (between its two attempts), at the server's pace.
+    assert sleeps == [17] * len(constants.OVERPASS_ENDPOINTS)
+
+
+def test_water_fetch_is_a_single_overpass_request(monkeypatch):
+    from core import water
+
+    calls = []
+
+    def fake_post_overpass(query, **kwargs):
+        calls.append(query)
+        return {
+            "elements": [
+                {
+                    "type": "way",
+                    "tags": {"natural": "water", "water": "lake"},
+                    "geometry": [
+                        {"lon": 0.0, "lat": 0.0},
+                        {"lon": 1.0, "lat": 0.0},
+                        {"lon": 1.0, "lat": 1.0},
+                        {"lon": 0.0, "lat": 0.0},
+                    ],
+                },
+                {
+                    "type": "way",
+                    "tags": {"waterway": "stream"},
+                    "geometry": [{"lon": 0.0, "lat": 0.0}, {"lon": 2.0, "lat": 2.0}],
+                },
+            ]
+        }
+
+    monkeypatch.setattr(water, "_post_overpass", fake_post_overpass)
+
+    from shapely.geometry import box
+
+    lakes, streams = water.fetch_water_overpass(box(0, 0, 1, 1))
+    assert len(calls) == 1  # lakes + streams share one request (F-26)
+    assert len(lakes) == 1 and len(streams) == 1
+    assert lakes[0].area > 0
+    assert streams[0].length > 0

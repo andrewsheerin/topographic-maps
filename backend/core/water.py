@@ -48,26 +48,45 @@ def _relation_polygon(el):
 
 
 def fetch_water_overpass(polygon_wgs84, *, lakes=True, streams=True):
-    """Fetch water bodies and waterways inside the polygon.
+    """Fetch water bodies and waterways inside the polygon in ONE Overpass
+    request (F-26: separate lake/stream queries fired back-to-back tripped
+    rate limits). Elements are split by their tags afterwards.
 
     Returns (lake_polys, stream_lines): two lists of shapely geometries in
     EPSG:4326. Either list is empty when its fetch is disabled."""
+    lake_polys, stream_lines = [], []
+    if not (lakes or streams):
+        return lake_polys, stream_lines
+
     poly_str = overpass_poly_str(polygon_wgs84)
     water_re = "|".join(constants.WATER_POLYGON_VALUES)
     waterway_re = "|".join(constants.WATERWAY_VALUES)
 
-    lake_polys = []
+    blocks = []
     if lakes:
-        query = f"""
-        [out:json][timeout:60];
-        (
-          way["natural"="water"]["water"~"^({water_re})$"](poly:"{poly_str}");
-          relation["natural"="water"]["water"~"^({water_re})$"](poly:"{poly_str}");
-        );
-        out geom;
-        """
-        data = _post_overpass(query, timeout_s=70, max_retries=3)
-        for el in data.get("elements", []):
+        blocks.append(
+            f'way["natural"="water"]["water"~"^({water_re})$"](poly:"{poly_str}");'
+        )
+        blocks.append(
+            f'relation["natural"="water"]["water"~"^({water_re})$"](poly:"{poly_str}");'
+        )
+    if streams:
+        blocks.append(f'way["waterway"~"^({waterway_re})$"](poly:"{poly_str}");')
+
+    query = (
+        "[out:json][timeout:60];\n(\n  "
+        + "\n  ".join(blocks)
+        + "\n);\nout geom;\n"
+    )
+    data = _post_overpass(query, timeout_s=70, max_retries=3)
+
+    for el in data.get("elements", []):
+        tags = el.get("tags") or {}
+        if tags.get("waterway") in constants.WATERWAY_VALUES:
+            pts = [(p["lon"], p["lat"]) for p in el.get("geometry", [])]
+            if len(pts) >= 2:
+                stream_lines.append(LineString(pts))
+        else:
             geom = (
                 _relation_polygon(el)
                 if el.get("type") == "relation"
@@ -75,19 +94,6 @@ def fetch_water_overpass(polygon_wgs84, *, lakes=True, streams=True):
             )
             if geom is not None and not geom.is_empty:
                 lake_polys.append(geom)
-
-    stream_lines = []
-    if streams:
-        query = f"""
-        [out:json][timeout:60];
-        way["waterway"~"^({waterway_re})$"](poly:"{poly_str}");
-        out geom;
-        """
-        data = _post_overpass(query, timeout_s=70, max_retries=3)
-        for el in data.get("elements", []):
-            pts = [(p["lon"], p["lat"]) for p in el.get("geometry", [])]
-            if len(pts) >= 2:
-                stream_lines.append(LineString(pts))
 
     return lake_polys, stream_lines
 

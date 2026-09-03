@@ -87,7 +87,17 @@ def _post_overpass(query: str, *, timeout_s: int = 60, max_retries: int = 3) -> 
             except Exception as e:
                 errors[endpoint] = e
                 if attempt < max_retries - 1:
-                    time.sleep(2**attempt)
+                    delay = 2**attempt
+                    resp = getattr(e, "response", None)
+                    if resp is not None and resp.status_code == 429:
+                        # Rate-limited: honor the server's Retry-After, and
+                        # never hammer faster than 10 s (F-26).
+                        retry_after = resp.headers.get("Retry-After", "")
+                        delay = max(
+                            delay,
+                            int(retry_after) if retry_after.isdigit() else 10,
+                        )
+                    time.sleep(delay)
 
     detail = " | ".join(f"{ep}: {err}" for ep, err in errors.items())
     raise RuntimeError(
