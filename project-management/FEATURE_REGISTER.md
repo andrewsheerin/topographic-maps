@@ -33,9 +33,9 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 
 | F-24 | Overpass fetch broken: overpass-api.de 406-blocks the default python-requests User-Agent; dead nchc endpoint (DNS gone) retried at full timeout; only the last endpoint's error surfaced | bug | C | DONE | 1c79ba7 | Root cause was the UA block — the app had been riding on fallback endpoints until they rotted. Fix: identifying User-Agent (OSM policy), drop nchc, fail fast on connection/timeout errors, report every endpoint's failure. Live-verified on the Alberta square: 6 lakes, 110 streams. |
 
-| F-25 | UI restructure: opt-in feature toggles ("Add roads" / "Add water" / "Add color") that reveal their inputs only when checked; Output moves to the bottom with three choices — STL, colored 3MF, full ZIP (3MF + STLs + datasets) | feature | C | PLANNED | | User-requested 2026-09-03. Shortens the form; roads/water/color default OFF, so an STL click makes zero Overpass calls (today road_levels defaults all-on, which is why a "3MF" click fetched roads). ZIP contents to confirm. |
+| F-25 | UI restructure: opt-in feature toggles ("Add roads" / "Add water" / "Add color") that reveal their inputs only when checked; Output moves to the bottom with three choices — STL, colored 3MF, full ZIP | feature | C | DONE | 05fe84d | User-requested 2026-09-03; all toggles default OFF so plain exports make zero Overpass calls. ZIP (user-confirmed): terrain_raw.stl + terrain_carved.stl + terrain.3mf (if color) + roads_utm.geojson / water_utm.geojson. 3MF disabled until color complete; ZIP disabled only when color is half-filled. |
 
-| F-26 | Overpass rate-limit hygiene: a 3MF click fired 3 queries back-to-back (lakes, streams, roads) and quick retries → 429s | fix | C | WIP | | Found retesting F-24: water fetch succeeded, roads then 429'd. Fix: lakes+streams merged into one query; 429 retries honor Retry-After (min 10 s). F-25's opt-in toggles remove the unwanted roads fetch itself. |
+| F-26 | Overpass rate-limit hygiene: a 3MF click fired 3 queries back-to-back (lakes, streams, roads) and quick retries → 429s | fix | C | DONE | 44b24b1 | Found retesting F-24: water fetch succeeded, roads then 429'd. Lakes+streams merged into one query; 429 retries honor Retry-After (min 10 s). F-25's opt-in toggles remove the unwanted roads fetch itself. |
 
 ## Dropped
 
