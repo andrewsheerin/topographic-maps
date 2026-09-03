@@ -1,4 +1,5 @@
 from .schemas import (
+    ColorBands,
     ColorParams,
     Generate3MFRequest,
     GenerateRequest,
@@ -9,6 +10,7 @@ from .schemas import (
 )
 
 __all__ = [
+    "ColorBands",
     "ColorParams",
     "Generate3MFRequest",
     "GenerateRequest",

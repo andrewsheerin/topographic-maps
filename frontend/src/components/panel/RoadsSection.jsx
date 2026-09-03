@@ -2,6 +2,8 @@ import Button from '../ui/Button.jsx';
 import styles from './RoadsSection.module.css';
 
 export default function RoadsSection({
+  enabled,
+  onToggle,
   classes,
   roads,
   onChange,
@@ -12,7 +14,19 @@ export default function RoadsSection({
     <section>
       <h2>3. Roads</h2>
 
-      <div className={styles.roadsPick}>
+      <label className={styles.toggle}>
+        <input
+          type="checkbox"
+          className={styles.checkbox}
+          checked={enabled}
+          onChange={(e) => onToggle(e.target.checked)}
+        />
+        <span>Add roads</span>
+      </label>
+
+      {enabled && (
+        <>
+          <div className={styles.roadsPick}>
         <div className={styles.roadsTitle}>Show / carve these road classes</div>
 
         {classes.map((c) => (
@@ -51,17 +65,19 @@ export default function RoadsSection({
           </div>
         ))}
 
-        <div className={styles.roadHeader} aria-hidden="true">
-          <div />
-          <div className={styles.roadH}>Width (mm)</div>
-          <div className={styles.roadH}>Depth (mm)</div>
-        </div>
-      </div>
+            <div className={styles.roadHeader} aria-hidden="true">
+              <div />
+              <div className={styles.roadH}>Width (mm)</div>
+              <div className={styles.roadH}>Depth (mm)</div>
+            </div>
+          </div>
 
-      <div className={styles.row}>
-        <Button onClick={onLoadRoads}>Load roads</Button>
-        <Button onClick={onClearRoads}>Clear roads</Button>
-      </div>
+          <div className={styles.row}>
+            <Button onClick={onLoadRoads}>Load roads</Button>
+            <Button onClick={onClearRoads}>Clear roads</Button>
+          </div>
+        </>
+      )}
     </section>
   );
 }

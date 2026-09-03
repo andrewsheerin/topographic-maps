@@ -5,6 +5,9 @@ import AreaSection from '../../components/panel/AreaSection.jsx';
 import TerrainParams from '../../components/panel/TerrainParams.jsx';
 import RoadsSection from '../../components/panel/RoadsSection.jsx';
 import WaterSection from '../../components/panel/WaterSection.jsx';
+import ColorSection, {
+  colorComplete,
+} from '../../components/panel/ColorSection.jsx';
 import OutputSection from '../../components/panel/OutputSection.jsx';
 import * as api from '../../lib/api.js';
 import { squareAroundPoint } from '../../lib/geometry.js';
@@ -32,10 +35,11 @@ const DEFAULT_ROADS = ROAD_CLASSES.reduce((acc, c) => {
   return acc;
 }, {});
 
-// Water defaults mirror backend constants (user-provided 2026-09-03).
+// Water defaults mirror backend constants (user-provided 2026-09-03). Lakes
+// and streams start checked — the "Add water" toggle is the on/off switch.
 const DEFAULT_WATER = {
-  lakes: false,
-  streams: false,
+  lakes: true,
+  streams: true,
   recess: '0.6',
   streamWidth: '1.0',
   streamDepth: '0.4',
@@ -74,6 +78,18 @@ export default function Generator() {
   const [roads, setRoads] = useState(DEFAULT_ROADS);
   const [water, setWater] = useState(DEFAULT_WATER);
   const [color3mf, setColor3mf] = useState(DEFAULT_COLOR_3MF);
+  // Opt-in feature toggles (F-25): off means no inputs shown and, above all,
+  // no Overpass fetch for that feature.
+  const [features, setFeatures] = useState({
+    roads: false,
+    water: false,
+    color: false,
+  });
+
+  const toggleFeature = useCallback((key, value) => {
+    setFeatures((f) => ({ ...f, [key]: value }));
+    if (key === 'roads' && !value) setRoadsGeojson(null);
+  }, []);
 
   const updateTerrain = useCallback((key, value) => {
     setTerrain((t) => ({ ...t, [key]: value }));
@@ -119,17 +135,30 @@ export default function Generator() {
       z_scale: Number(terrain.zScale || 1.0),
       target_max_mm: Number(terrain.targetMaxMm || 200),
       base_thickness_mm: Number(terrain.baseThicknessMm || 2),
-      road_levels: selectedRoadLevels,
+      road_levels: features.roads ? selectedRoadLevels : [],
       road_etch,
       water: {
-        lakes: water.lakes,
-        streams: water.streams,
+        lakes: features.water && water.lakes,
+        streams: features.water && water.streams,
         recess_mm: Number(water.recess || 0),
         stream_width_mm: Number(water.streamWidth || 0),
         stream_depth_mm: Number(water.streamDepth || 0),
       },
+      color:
+        features.color && colorComplete(color3mf)
+          ? {
+              treeline_m: Number(color3mf.treeline),
+              snowline_m: Number(color3mf.snowline),
+              colors: {
+                water: color3mf.water,
+                forest: color3mf.forest,
+                rock: color3mf.rock,
+                snow: color3mf.snow,
+              },
+            }
+          : null,
     };
-  }, [terrain, roads, selectedRoadLevels, water]);
+  }, [terrain, roads, selectedRoadLevels, water, features, color3mf]);
 
   /* ---------------- polygon ---------------- */
 
@@ -271,21 +300,13 @@ export default function Generator() {
       const blob = await api.generate3mf({
         polygon_geojson: polygon,
         ...buildParams(),
-        treeline_m: Number(color3mf.treeline),
-        snowline_m: Number(color3mf.snowline),
-        colors: {
-          water: color3mf.water,
-          forest: color3mf.forest,
-          rock: color3mf.rock,
-          snow: color3mf.snow,
-        },
       });
       downloadBlob(blob, 'terrain.3mf');
       setStatus('3MF downloaded.');
     } catch (err) {
       setStatus(err.message);
     }
-  }, [polygon, buildParams, color3mf]);
+  }, [polygon, buildParams]);
 
   const handleGenerateBundle = useCallback(async () => {
     if (!polygon) {
@@ -323,6 +344,8 @@ export default function Generator() {
         <TerrainParams terrain={terrain} onChange={updateTerrain} />
 
         <RoadsSection
+          enabled={features.roads}
+          onToggle={(v) => toggleFeature('roads', v)}
           classes={ROAD_CLASSES}
           roads={roads}
           onChange={updateRoad}
@@ -330,15 +353,26 @@ export default function Generator() {
           onClearRoads={handleClearRoads}
         />
 
-        <WaterSection water={water} onChange={updateWater} />
+        <WaterSection
+          enabled={features.water}
+          onToggle={(v) => toggleFeature('water', v)}
+          water={water}
+          onChange={updateWater}
+        />
+
+        <ColorSection
+          enabled={features.color}
+          onToggle={(v) => toggleFeature('color', v)}
+          color={color3mf}
+          onChange={updateColor3mf}
+        />
 
         <OutputSection
           onGenerateStl={handleGenerateStl}
-          onGenerateBundle={handleGenerateBundle}
-          bundleDisabled={selectedRoadLevels.length === 0}
-          color3mf={color3mf}
-          onColorChange={updateColor3mf}
           onGenerate3mf={handleGenerate3mf}
+          onGenerateBundle={handleGenerateBundle}
+          threemfDisabled={!(features.color && colorComplete(color3mf))}
+          zipDisabled={features.color && !colorComplete(color3mf)}
           status={status}
         />
       </aside>

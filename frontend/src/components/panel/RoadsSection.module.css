@@ -1,3 +1,12 @@
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+}
+
 .roadsPick {
   padding: var(--space-4);
   border-radius: var(--radius-md);

@@ -36,18 +36,6 @@ class RoadEtchParams(BaseModel):
     residential: RoadEtch = RoadEtch(width_mm=0.6, depth_mm=0.5)
 
 
-class GenerateRequest(BaseModel):
-    polygon_geojson: dict[str, Any]
-    dem_dataset: str
-    downsample: int
-    z_scale: float
-    target_max_mm: float
-    base_thickness_mm: float  # print millimetres (F-17); STL is always sealed (F-19)
-    road_levels: list[str] = []
-    road_etch: RoadEtchParams = RoadEtchParams()
-    water: WaterParams = WaterParams()
-
-
 _HEX = r"^#[0-9A-Fa-f]{6}$"
 
 
@@ -61,14 +49,35 @@ class ColorParams(BaseModel):
     snow: str = Field(pattern=_HEX)
 
 
-class Generate3MFRequest(GenerateRequest):
-    """Colored 3MF export (F-23). treeline_m and snowline_m are scientific
-    per-request values (they vary by mountain range) — required, no defaults
-    (science-integrity)."""
+class ColorBands(BaseModel):
+    """Color-band parameters for the 3MF (F-23/F-25). treeline_m and
+    snowline_m are scientific per-request values (they vary by mountain
+    range) — required, no defaults (science-integrity)."""
 
     treeline_m: float
     snowline_m: float
     colors: ColorParams
+
+
+class GenerateRequest(BaseModel):
+    polygon_geojson: dict[str, Any]
+    dem_dataset: str
+    downsample: int
+    z_scale: float
+    target_max_mm: float
+    base_thickness_mm: float  # print millimetres (F-17); STL is always sealed (F-19)
+    road_levels: list[str] = []
+    road_etch: RoadEtchParams = RoadEtchParams()
+    water: WaterParams = WaterParams()
+    # Present when the "Add color" toggle is on (F-25): the ZIP bundle then
+    # also contains the colored 3MF.
+    color: ColorBands | None = None
+
+
+class Generate3MFRequest(GenerateRequest):
+    """Colored 3MF export: color is mandatory here."""
+
+    color: ColorBands
 
 
 class RoadsRequest(BaseModel):

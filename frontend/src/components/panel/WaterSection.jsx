@@ -1,11 +1,22 @@
 import styles from './WaterSection.module.css';
 
-export default function WaterSection({ water, onChange }) {
+export default function WaterSection({ enabled, onToggle, water, onChange }) {
   return (
     <section>
       <h2>4. Water</h2>
 
-      <div className={styles.box}>
+      <label className={styles.toggle}>
+        <input
+          type="checkbox"
+          className={styles.checkbox}
+          checked={enabled}
+          onChange={(e) => onToggle(e.target.checked)}
+        />
+        <span>Add water</span>
+      </label>
+
+      {enabled && (
+        <div className={styles.box}>
         <div className={styles.title}>
           Flatten lakes to their own level; carve streams like roads
         </div>
@@ -72,7 +83,8 @@ export default function WaterSection({ water, onChange }) {
             onChange={(e) => onChange('streamDepth', e.target.value)}
           />
         </div>
-      </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -70,9 +70,10 @@ def _apply_water(
 ):
     """Fetch water and apply it to the DEM (F-22): flatten each lake to its own
     plane first, then carve streams (lakes protected). Returns
-    (dem, water_mask); water_mask is None when water is disabled."""
+    (dem, water_mask, lakes_utm, streams_utm); the last three are None when
+    water is disabled."""
     if not water or not (water.get("lakes") or water.get("streams")):
-        return dem_arr, None
+        return dem_arr, None, None, None
 
     lake_polys, stream_lines = water_mod.fetch_water_overpass(
         polygon_wgs84,
@@ -100,7 +101,48 @@ def _apply_water(
         water.get("stream_depth_mm", constants.STREAM_DEPTH_MM),
         protect_mask=water_mask,
     )
-    return dem_arr, water_mask
+    return dem_arr, water_mask, lakes_utm, streams_utm
+
+
+def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):
+    """Write the colored 3MF for a sealed solid (F-23). `color` is the
+    ColorBands dict: treeline_m, snowline_m, colors{water,forest,rock,snow}."""
+    cell_cls = mesh_mod.classify_terrain_cells(
+        dem_arr, water_mask, color["treeline_m"], color["snowline_m"]
+    )
+    face_cls = mesh_mod.face_classes_for_solid(dem_arr, cell_cls, len(solid.faces))
+    c = color["colors"]
+    threemf_mod.write_3mf(
+        out_path,
+        solid.vertices,
+        solid.faces,
+        face_cls,
+        # Palette in class order: 0 water, 1 forest, 2 rock, 3 snow.
+        [c["water"], c["forest"], c["rock"], c["snow"]],
+        default_index=2,  # base/walls print in the rock color
+    )
+    return out_path
+
+
+def _water_geojson_utm(lakes_utm, streams_utm, epsg):
+    """Fetched water as one UTM FeatureCollection, `kind` = lake | stream."""
+    feats = []
+    for gs, kind in ((lakes_utm, "lake"), (streams_utm, "stream")):
+        if gs is None:
+            continue
+        for geom in gs:
+            feats.append(
+                {
+                    "type": "Feature",
+                    "properties": {"kind": kind},
+                    "geometry": geom.__geo_interface__,
+                }
+            )
+    return {
+        "type": "FeatureCollection",
+        "features": feats,
+        "crs": {"type": "name", "properties": {"name": f"EPSG:{epsg}"}},
+    }
 
 
 def generate_stl_from_polygon(
@@ -118,7 +160,7 @@ def generate_stl_from_polygon(
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 
-    dem_arr, _ = _apply_water(
+    dem_arr, _, _, _ = _apply_water(
         dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
     )
 
@@ -156,9 +198,7 @@ def generate_3mf_from_polygon(
     z_scale,
     target_max_mm,
     base_thickness_mm,
-    treeline_m,
-    snowline_m,
-    colors_hex,
+    color,
     road_levels=None,
     road_etch=None,
     water=None,
@@ -166,17 +206,16 @@ def generate_3mf_from_polygon(
     """Colored 3MF export (F-23): the same terrain pipeline as the STL, plus a
     per-face class raster written via the 3MF Materials extension.
 
-    colors_hex is [water, forest, rock, snow] in class order; treeline_m and
-    snowline_m are per-request user values. Streams and roads carve geometry
-    but carry no color in this version (register F-23 notes the tradeoff);
-    base and walls take the object default (rock)."""
+    `color` is the ColorBands dict (per-request user values). Streams and
+    roads carve geometry but carry no color in this version (register F-23
+    notes the tradeoff)."""
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
         polygon_wgs84, dem_dataset, downsample, tmp
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 
-    dem_arr, water_mask = _apply_water(
+    dem_arr, water_mask, _, _ = _apply_water(
         dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
     )
     if road_levels:
@@ -188,21 +227,8 @@ def generate_3mf_from_polygon(
     surface = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
     solid = mesh_mod.add_base(surface, float(base_thickness_mm))
 
-    cell_cls = mesh_mod.classify_terrain_cells(
-        dem_arr, water_mask, treeline_m, snowline_m
-    )
-    face_cls = mesh_mod.face_classes_for_solid(dem_arr, cell_cls, len(solid.faces))
-
     out = os.path.join(tmp, "terrain.3mf")
-    threemf_mod.write_3mf(
-        out,
-        solid.vertices,
-        solid.faces,
-        face_cls,
-        colors_hex,
-        default_index=2,  # base/walls print in the rock color
-    )
-    return out
+    return _write_colored_3mf(out, dem_arr, water_mask, solid, color)
 
 
 def generate_bundle_from_polygon(
@@ -212,17 +238,22 @@ def generate_bundle_from_polygon(
     z_scale,
     target_max_mm,
     base_thickness_mm,
-    road_levels,
+    road_levels=None,
     road_etch=None,
     water=None,
+    color=None,
 ):
+    """The "everything" ZIP (F-25): raw STL + carved STL always; plus the
+    colored 3MF when `color` is set, and UTM GeoJSON of whichever features
+    (roads, water) were fetched. Roads/water/color are all opt-in — with
+    nothing toggled, no Overpass call is made."""
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
         polygon_wgs84, dem_dataset, downsample, tmp
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 
-    # Raw mesh — no water, no roads.
+    # Raw mesh — the base terrain, no water, no roads.
     raw_mesh = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
     raw_mesh = mesh_mod.add_base(raw_mesh, float(base_thickness_mm))
     raw_stl = os.path.join(tmp, "terrain_raw.stl")
@@ -230,30 +261,51 @@ def generate_bundle_from_polygon(
 
     # Carved mesh: lakes flatten first, streams carve around them (F-22),
     # then roads carve last.
-    watered_dem, _ = _apply_water(
+    carved_dem, water_mask, lakes_utm, streams_utm = _apply_water(
         dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
     )
-    carved_dem, gdf_roads_utm = _fetch_and_carve_roads(
-        watered_dem, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale,
-        road_levels, road_etch,
-    )
+    gdf_roads_utm = None
+    if road_levels:
+        carved_dem, gdf_roads_utm = _fetch_and_carve_roads(
+            carved_dem, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale,
+            road_levels, road_etch,
+        )
 
-    roads_fc_utm = {
-        "type": "FeatureCollection",
-        "features": json.loads(gdf_roads_utm.to_json()).get("features", []),
-        "crs": {"type": "name", "properties": {"name": f"EPSG:{epsg}"}},
-    }
-    roads_geojson_utm_path = os.path.join(tmp, "roads_centerlines_utm.geojson")
-    roads_mod.write_roads_geojson(roads_fc_utm, roads_geojson_utm_path)
     carved_mesh = mesh_mod.dem_to_mesh(carved_dem, px_m, scale_xy, z_scale)
-    carved_mesh = mesh_mod.add_base(carved_mesh, float(base_thickness_mm))
-    carved_stl = os.path.join(tmp, "terrain_with_roads_recess.stl")
-    carved_mesh.export(carved_stl)
+    carved_solid = mesh_mod.add_base(carved_mesh, float(base_thickness_mm))
+    carved_stl = os.path.join(tmp, "terrain_carved.stl")
+    carved_solid.export(carved_stl)
 
     zip_path = os.path.join(tmp, "terrain_bundle.zip")
     with zipfile.ZipFile(zip_path, "w") as z:
         z.write(raw_stl, "terrain_raw.stl")
-        z.write(roads_geojson_utm_path, "roads_centerlines_utm.geojson")
-        z.write(carved_stl, "terrain_with_roads_recess.stl")
+        z.write(carved_stl, "terrain_carved.stl")
+
+        if color:
+            threemf_path = _write_colored_3mf(
+                os.path.join(tmp, "terrain.3mf"),
+                carved_dem,
+                water_mask,
+                carved_solid,
+                color,
+            )
+            z.write(threemf_path, "terrain.3mf")
+
+        if gdf_roads_utm is not None:
+            roads_fc_utm = {
+                "type": "FeatureCollection",
+                "features": json.loads(gdf_roads_utm.to_json()).get("features", []),
+                "crs": {"type": "name", "properties": {"name": f"EPSG:{epsg}"}},
+            }
+            roads_path = os.path.join(tmp, "roads_utm.geojson")
+            roads_mod.write_roads_geojson(roads_fc_utm, roads_path)
+            z.write(roads_path, "roads_utm.geojson")
+
+        if lakes_utm is not None or streams_utm is not None:
+            water_path = os.path.join(tmp, "water_utm.geojson")
+            roads_mod.write_roads_geojson(
+                _water_geojson_utm(lakes_utm, streams_utm, epsg), water_path
+            )
+            z.write(water_path, "water_utm.geojson")
 
     return zip_path

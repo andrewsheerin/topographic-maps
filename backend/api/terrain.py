@@ -42,15 +42,7 @@ def generate_3mf(req: Generate3MFRequest):
             z_scale=req.z_scale,
             target_max_mm=req.target_max_mm,
             base_thickness_mm=req.base_thickness_mm,
-            treeline_m=req.treeline_m,
-            snowline_m=req.snowline_m,
-            # Palette in class order: 0 water, 1 forest, 2 rock, 3 snow.
-            colors_hex=[
-                req.colors.water,
-                req.colors.forest,
-                req.colors.rock,
-                req.colors.snow,
-            ],
+            color=req.color.model_dump(),
             road_levels=req.road_levels,
             road_etch=req.road_etch.model_dump(),
             water=req.water.model_dump(),
@@ -76,6 +68,7 @@ def generate_bundle(req: GenerateRequest):
             road_levels=req.road_levels,
             road_etch=req.road_etch.model_dump(),
             water=req.water.model_dump(),
+            color=req.color.model_dump() if req.color else None,
         )
         return FileResponse(
             zip_path, filename="terrain_bundle.zip", media_type="application/zip"
