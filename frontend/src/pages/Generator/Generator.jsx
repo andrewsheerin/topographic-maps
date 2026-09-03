@@ -6,6 +6,7 @@ import TerrainParams from '../../components/panel/TerrainParams.jsx';
 import RoadsSection from '../../components/panel/RoadsSection.jsx';
 import OutputSection from '../../components/panel/OutputSection.jsx';
 import * as api from '../../lib/api.js';
+import { squareAroundPoint } from '../../lib/geometry.js';
 import styles from './Generator.module.css';
 
 const ROAD_CLASSES = [
@@ -120,6 +121,15 @@ export default function Generator() {
     setAreaSource(null);
     setRoadsGeojson(null);
     setStatus('Area cleared.');
+  }, []);
+
+  const handlePlaceSquare = useCallback((lat, lng, sideKm) => {
+    setPolygon(squareAroundPoint(lat, lng, sideKm));
+    setAreaSource({
+      label: `${sideKm} km square at ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+    });
+    setRoadsGeojson(null);
+    setStatus('Area set.');
   }, []);
 
   const handleUpload = useCallback(async (file) => {
@@ -240,6 +250,7 @@ export default function Generator() {
           onUpload={handleUpload}
           onPickPlace={handlePickPlace}
           onPickState={handlePickState}
+          onPlaceSquare={handlePlaceSquare}
           selectedGeoid={areaSource?.geoid ?? null}
           areaLabel={areaSource?.label ?? null}
           onClearArea={handleClearArea}

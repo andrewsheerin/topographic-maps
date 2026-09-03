@@ -13,7 +13,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-4 | Reconcile per-class road-width defaults (constants vs UI/RoadEtchParams) | fix | B | PLANNED | | Blocked by D-1. |
 | F-5 | Tests for mesh scale + carve against a user-verified worked example | test | B | PLANNED | | Science-integrity requires calc tests; extend the two existing carve tests. |
 | F-6 | In-browser 3D preview of the generated mesh | idea | later | IDEA | | Would remove the download-to-inspect loop. |
-| F-7 | Surface more DEM datasets in the UI (COP30/SRTM/NASADEM/AW3D30) | idea | later | IDEA | | Already wired in `DATASET_ALIASES`; just not in the dropdown. |
+| F-7 | Surface more DEM datasets in the UI (COP30/SRTM/NASADEM/AW3D30) | feature | C | PLANNED | | Already wired in `DATASET_ALIASES`; just not in the dropdown. Pulled forward 2026-09-03: F-21 test point is in Canada, USGS-only dropdown can't serve it. |
 | F-10 | Vectorize `dem_to_mesh` face construction | refactor | C | DONE | 53f1e20 | Became visibly slow with state outlines (F-14); pulled forward. 1.3M-cell grid meshes+seals in ~18s. |
 | F-8 | Polygon drawing aborts at the 3rd vertex | bug | C | DONE | acb749d | Leaflet.draw 1.0.4 `readableArea` assigns an undeclared `type` → ESM strict-mode throw. Patched in `lib/leafletDrawFix.js`. |
 | F-9 | Add rectangle + circle draw tools (circle → polygon for DEM) | feature | C | DONE | acb749d | Squares via the rectangle tool; circle → 64-gon polygon. |
@@ -27,6 +27,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-18 | Remove the buffer-distance parameter | fix | C | DONE | 01fe0f3 | User approved. Field, API param, and pipeline buffer dropped; buffer(0) kept solely as validity normalization after reprojection. |
 | F-19 | Crop the mesh to the area boundary (state-shaped prints); STL always sealed — "Add base" checkbox removed | feature | C | DONE | d3d24a5 | Slicer can't slice the no-base open sheet; flat water plate wastes the bed. Walls along shoreline, islands = separate solids, DEM nodata holes stay visible. |
 | F-20 | RI state outline hits the watertight guard: diagonal (corner-touching) cells make the seal non-manifold | bug | C | DONE | 51e628a | Pinch vertex → vertical wall edge shared by 4 faces. Fix: erode one cell of each diagonal pair before meshing. |
+| F-21 | Squares: (a) lat/lon + side length form places a square centered on a GPS point; (b) square-constrained draw tool on the map | feature | C | WIP | | User chose both halves. Test point: 50.86047, -115.55197 (Alberta) — needs a global DEM dataset (F-7 pulled forward). |
 
 ## Dropped
 

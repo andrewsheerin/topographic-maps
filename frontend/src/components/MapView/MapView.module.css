@@ -2,3 +2,20 @@
   width: 100%;
   height: 100%;
 }
+
+/* The custom square tool (lib/leafletSquare.js) has no slot in Leaflet.draw's
+   icon sprite — draw its glyph instead. currentColor picks up the toolbar's
+   own icon colour; px sizes match the 30px toolbar buttons. */
+.map :global(.leaflet-draw-toolbar a.leaflet-draw-draw-square) {
+  background-image: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map :global(.leaflet-draw-toolbar a.leaflet-draw-draw-square)::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+}
