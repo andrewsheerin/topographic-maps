@@ -65,6 +65,10 @@ One line each — what makes autonomous tiers auditable. Newest first.
 
 | Date | Decision | Why |
 | --- | --- | --- |
+| 2026-09-03 | F-28: 3MF stream color mask = cells with ≥50% buffer coverage | A triangle gets one color; majority threshold keeps painted width honest against the carved geometry |
+| 2026-09-03 | F-28: width floor clamps in the backend (exact, from the projected raster) and warns in the UI (bbox approximation) | UI-only clamping would drift from the true cell size; backend-only would be silent |
+| 2026-09-03 | F-28: dem_upsample uses GDAL reproject (same CRS, scaled transform, NaN nodata) | NaN excluded from interpolation weights — footprint preserved, nodata never filled |
+| 2026-09-03 | F-28: V-profile rings combine per-cell via max (deepest wins), matching build_carve_plan's documented contract; roads code untouched | Accumulating nested rings would triple-count the centerline; D-2 (roads overlap rule) stays open |
 | 2026-09-03 | ZIP filenames renamed: terrain_carved.stl (was terrain_with_roads_recess.stl), roads_utm.geojson (was roads_centerlines_utm.geojson), new water_utm.geojson (`kind`=lake/stream) | Carving now includes water, so the old name lied; _utm suffix flags the CRS |
 | 2026-09-03 | Inside "Add water", lakes and streams start checked | The toggle is the on/off switch; one click enables the common case |
 | 2026-09-03 | Overpass requests send `TOPO2STL/1.0 (personal terrain-print app)` as User-Agent; no contact email included | OSM policy wants an identifying UA (overpass-api.de 406-blocks the requests default); left your email out of the repo — add it to the UA string if you prefer |
