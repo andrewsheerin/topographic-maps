@@ -67,3 +67,32 @@
   margin: 0;
   border-radius: var(--radius-sm);
 }
+
+.widthRow {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.widthLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  min-width: 0;
+}
+
+.floorHint,
+.floorWarn {
+  font-size: var(--text-xs);
+  margin: var(--space-2) var(--space-3) 0 var(--space-3);
+}
+
+.floorHint {
+  color: var(--color-muted);
+}
+
+.floorWarn {
+  color: var(--color-accent-strong);
+}

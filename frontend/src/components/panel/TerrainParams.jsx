@@ -1,6 +1,6 @@
 import Field from '../ui/Field.jsx';
 
-export default function TerrainParams({ terrain, onChange }) {
+export default function TerrainParams({ terrain, onChange, cellMm }) {
   return (
     <section>
       <h2>2. Terrain parameters</h2>
@@ -29,6 +29,25 @@ export default function TerrainParams({ terrain, onChange }) {
           max="20"
           value={terrain.downsample}
           onChange={(e) => onChange('downsample', e.target.value)}
+        />
+      </Field>
+
+      <Field
+        label={
+          cellMm != null
+            ? `Detail multiplier — ≈${cellMm.toFixed(2)} mm per DEM cell`
+            : 'Detail multiplier'
+        }
+        htmlFor="demUpsample"
+      >
+        <input
+          id="demUpsample"
+          type="number"
+          min="1"
+          max="4"
+          value={terrain.demUpsample}
+          onChange={(e) => onChange('demUpsample', e.target.value)}
+          title="Bilinear DEM upsample: sharpens water placement (no new terrain detail). Triangle count grows with the square of this."
         />
       </Field>
 

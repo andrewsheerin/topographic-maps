@@ -10,8 +10,24 @@ import ColorSection, {
 } from '../../components/panel/ColorSection.jsx';
 import OutputSection from '../../components/panel/OutputSection.jsx';
 import * as api from '../../lib/api.js';
-import { squareAroundPoint } from '../../lib/geometry.js';
+import { maxExtentMeters, squareAroundPoint } from '../../lib/geometry.js';
 import styles from './Generator.module.css';
+
+// Nominal dataset resolutions in metres — drives the cell-size readout only;
+// the backend uses the actual raster. Mirrors backend DATASET_ALIASES.
+const DATASET_RES_M = {
+  USGS10m: 10,
+  USGS30m: 30,
+  SRTMGL1: 30,
+  COP30: 30,
+  COP90: 90,
+  NASADEM: 30,
+  AW3D30: 30,
+};
+
+// One extrusion line of a 0.4 mm nozzle — mirrors the backend constant
+// (user-provided 2026-09-03, F-28 W-5).
+const EXTRUSION_LINE_WIDTH_MM = 0.42;
 
 const ROAD_CLASSES = [
   { key: 'motorway', label: 'Motorway', width: '2.0', depth: '0.5' },
@@ -25,6 +41,7 @@ const ROAD_CLASSES = [
 const DEFAULT_TERRAIN = {
   demDataset: 'USGS10m',
   downsample: '1',
+  demUpsample: '1',
   zScale: '2.0',
   targetMaxMm: '200',
   baseThicknessMm: '2',
@@ -37,11 +54,14 @@ const DEFAULT_ROADS = ROAD_CLASSES.reduce((acc, c) => {
 
 // Water defaults mirror backend constants (user-provided 2026-09-03). Lakes
 // and streams start checked — the "Add water" toggle is the on/off switch.
+// Per-class stream widths (F-28 W-4): wider = downstream.
 const DEFAULT_WATER = {
   lakes: true,
   streams: true,
   recess: '0.6',
+  riverWidth: '1.6',
   streamWidth: '1.0',
+  brookWidth: '0.6',
   streamDepth: '0.4',
 };
 
@@ -112,6 +132,26 @@ export default function Generator() {
     [roads],
   );
 
+  // Approximate print-mm size of one DEM cell for the current area/settings
+  // (F-28): drives the detail readout and the stream width floor. Null until
+  // an area is set.
+  const cellMm = useMemo(() => {
+    if (!polygon) return null;
+    const maxDimM = maxExtentMeters(polygon);
+    const resM = DATASET_RES_M[terrain.demDataset];
+    if (!maxDimM || !resM) return null;
+    const downsample = Math.max(1, Number(terrain.downsample) || 1);
+    const upsample = Math.max(1, Number(terrain.demUpsample) || 1);
+    const targetMm = Number(terrain.targetMaxMm) || 0;
+    if (targetMm <= 0) return null;
+    return ((resM * downsample) / upsample) * (targetMm / maxDimM);
+  }, [polygon, terrain]);
+
+  const widthFloorMm = useMemo(
+    () => (cellMm == null ? null : Math.max(cellMm, EXTRUSION_LINE_WIDTH_MM)),
+    [cellMm],
+  );
+
   // Numeric widths keyed by class, used to drive the map road preview.
   const roadWidths = useMemo(() => {
     const w = {};
@@ -129,9 +169,17 @@ export default function Generator() {
         depth_mm: Number(roads[c.key].depth || 0),
       };
     });
+    // W-5: clamp sub-floor stream widths (the UI also warns inline).
+    const clampWidth = (v) => {
+      const w = Number(v || 0);
+      return widthFloorMm != null && w > 0 && w < widthFloorMm
+        ? widthFloorMm
+        : w;
+    };
     return {
       dem_dataset: terrain.demDataset,
       downsample: Number(terrain.downsample || 1),
+      dem_upsample: Number(terrain.demUpsample || 1),
       z_scale: Number(terrain.zScale || 1.0),
       target_max_mm: Number(terrain.targetMaxMm || 200),
       base_thickness_mm: Number(terrain.baseThicknessMm || 2),
@@ -141,7 +189,11 @@ export default function Generator() {
         lakes: features.water && water.lakes,
         streams: features.water && water.streams,
         recess_mm: Number(water.recess || 0),
-        stream_width_mm: Number(water.streamWidth || 0),
+        stream_widths_mm: {
+          river: clampWidth(water.riverWidth),
+          stream: clampWidth(water.streamWidth),
+          brook: clampWidth(water.brookWidth),
+        },
         stream_depth_mm: Number(water.streamDepth || 0),
       },
       color:
@@ -158,7 +210,7 @@ export default function Generator() {
             }
           : null,
     };
-  }, [terrain, roads, selectedRoadLevels, water, features, color3mf]);
+  }, [terrain, roads, selectedRoadLevels, water, features, color3mf, widthFloorMm]);
 
   /* ---------------- polygon ---------------- */
 
@@ -341,7 +393,7 @@ export default function Generator() {
           onClearArea={handleClearArea}
         />
 
-        <TerrainParams terrain={terrain} onChange={updateTerrain} />
+        <TerrainParams terrain={terrain} onChange={updateTerrain} cellMm={cellMm} />
 
         <RoadsSection
           enabled={features.roads}
@@ -358,6 +410,7 @@ export default function Generator() {
           onToggle={(v) => toggleFeature('water', v)}
           water={water}
           onChange={updateWater}
+          widthFloorMm={widthFloorMm}
         />
 
         <ColorSection
