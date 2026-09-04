@@ -43,7 +43,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-29 | Strahler stream ordering for taper (more faithful than OSM waterway class) | idea | later | IDEA | | Candidate successor to F-28's W-4 per-class widths. Needs network topology from the fetched ways. |
 | F-30 | `read_dem` downsample=avg may smear the nodata value (e.g. −9999) into edge cells before the NaN mask is applied | bug | later | IDEA | | Spotted during F-28. Average-resampling happens in `src.read`, nodata→NaN conversion after — edge cells mixing valid+nodata become garbage. Likely tripped only with downsample>1 on clipped rasters. |
 
-| F-31 | "Named streams only" filter: waterway fetch keeps only ways with a `name` tag | feature | C | WIP | | Chosen over intermittent-filter after tag census of the Alberta box (94 ways: all `stream`, 0 intermittent-tagged, 22 named) — named ≈ appears-on-a-paper-topo. Filter applied in the Overpass query itself. Strahler (F-29) remains the principled successor. |
+| F-31 | "Named streams only" filter: waterway fetch keeps only ways with a `name` tag | feature | C | DONE | 7862164 | Chosen over intermittent-filter after tag census of the Alberta box (94 ways: all `stream`, 0 intermittent-tagged, 22 named) — named ≈ appears-on-a-paper-topo. Filtered in the Overpass query itself; live-verified 94→22. Checkbox defaults ON. Strahler (F-29) remains the principled successor. |
 
 ## Dropped
 
