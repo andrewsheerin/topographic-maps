@@ -29,6 +29,9 @@ class WaterParams(BaseModel):
 
     lakes: bool = False
     streams: bool = False
+    # F-31: keep only waterways with a `name` tag (unnamed = mostly traced
+    # gullies). Defaults on — the dense-network complaint that motivated it.
+    named_only: bool = True
     recess_mm: float = constants.WATER_RECESS_MM
     stream_widths_mm: StreamWidths = StreamWidths()
     stream_depth_mm: float = constants.STREAM_DEPTH_MM

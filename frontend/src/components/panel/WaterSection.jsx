@@ -90,6 +90,18 @@ export default function WaterSection({
         </div>
 
         {water.streams && (
+          <label className={`${styles.check} ${styles.subCheck}`}>
+            <input
+              type="checkbox"
+              className={styles.checkbox}
+              checked={water.namedOnly}
+              onChange={(e) => onChange('namedOnly', e.target.checked)}
+            />
+            <span className={styles.name}>Named streams only</span>
+          </label>
+        )}
+
+        {water.streams && (
           <div className={styles.widthRow}>
             {STREAM_CLASSES.map((c) => (
               <label className={styles.widthLabel} key={c.key} htmlFor={c.key}>

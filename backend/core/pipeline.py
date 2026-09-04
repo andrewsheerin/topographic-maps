@@ -84,6 +84,7 @@ def _apply_water(
         polygon_wgs84,
         lakes=bool(water.get("lakes")),
         streams=bool(water.get("streams")),
+        named_streams_only=bool(water.get("named_only")),
     )
     lakes_utm = water_mod.water_to_utm_clipped(lake_polys, epsg, poly_utm)
     streams_utm = water_mod.streams_to_utm_clipped(stream_lines, epsg, poly_utm)

@@ -125,3 +125,11 @@ def test_water_fetch_is_a_single_overpass_request(monkeypatch):
     assert lakes[0].area > 0
     wclass, line = streams[0]  # (waterway_class, geometry) since F-28
     assert wclass == "stream" and line.length > 0
+    # Default: no name filter in the waterway block.
+    assert '["name"]' not in calls[0]
+
+    # F-31: named_streams_only filters in the query itself, waterways only.
+    water.fetch_water_overpass(box(0, 0, 1, 1), named_streams_only=True)
+    assert '"waterway"' in calls[1] and '["name"]' in calls[1]
+    lake_block = [ln for ln in calls[1].splitlines() if '"natural"="water"' in ln]
+    assert lake_block and all('["name"]' not in ln for ln in lake_block)

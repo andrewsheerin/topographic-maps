@@ -68,6 +68,12 @@
   border-radius: var(--radius-sm);
 }
 
+.subCheck {
+  flex: none;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
 .widthRow {
   display: flex;
   gap: var(--space-3);

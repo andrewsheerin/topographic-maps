@@ -47,10 +47,17 @@ def _relation_polygon(el):
     return None if outer.is_empty else outer
 
 
-def fetch_water_overpass(polygon_wgs84, *, lakes=True, streams=True):
+def fetch_water_overpass(
+    polygon_wgs84, *, lakes=True, streams=True, named_streams_only=False
+):
     """Fetch water bodies and waterways inside the polygon in ONE Overpass
     request (F-26: separate lake/stream queries fired back-to-back tripped
     rate limits). Elements are split by their tags afterwards.
+
+    named_streams_only (F-31) keeps only waterways carrying a `name` tag —
+    named ways are the streams a paper topo would show, unnamed ones are
+    mostly imagery-traced gullies. Applied in the query itself so the
+    payload shrinks too. Lakes are never name-filtered.
 
     Returns (lake_polys, stream_lines): lake_polys is a list of shapely
     geometries, stream_lines a list of (waterway_class, LineString) tuples —
@@ -73,7 +80,10 @@ def fetch_water_overpass(polygon_wgs84, *, lakes=True, streams=True):
             f'relation["natural"="water"]["water"~"^({water_re})$"](poly:"{poly_str}");'
         )
     if streams:
-        blocks.append(f'way["waterway"~"^({waterway_re})$"](poly:"{poly_str}");')
+        name_filter = '["name"]' if named_streams_only else ""
+        blocks.append(
+            f'way["waterway"~"^({waterway_re})$"]{name_filter}(poly:"{poly_str}");'
+        )
 
     query = (
         "[out:json][timeout:60];\n(\n  "

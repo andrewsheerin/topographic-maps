@@ -58,6 +58,7 @@ const DEFAULT_ROADS = ROAD_CLASSES.reduce((acc, c) => {
 const DEFAULT_WATER = {
   lakes: true,
   streams: true,
+  namedOnly: true,
   recess: '0.6',
   riverWidth: '1.6',
   streamWidth: '1.0',
@@ -188,6 +189,7 @@ export default function Generator() {
       water: {
         lakes: features.water && water.lakes,
         streams: features.water && water.streams,
+        named_only: water.namedOnly,
         recess_mm: Number(water.recess || 0),
         stream_widths_mm: {
           river: clampWidth(water.riverWidth),
