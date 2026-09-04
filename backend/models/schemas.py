@@ -13,6 +13,16 @@ class RoadEtch(BaseModel):
     depth_mm: float = 0.0
 
 
+class StreamWidths(BaseModel):
+    """Per-class stream carve widths, print mm (F-28 W-4): wider classes are
+    downstream, so streams taper toward the headwaters. Defaults from
+    constants (user-provided 2026-09-03)."""
+
+    river: float = constants.STREAM_WIDTHS_MM["river"]
+    stream: float = constants.STREAM_WIDTHS_MM["stream"]
+    brook: float = constants.STREAM_WIDTHS_MM["brook"]
+
+
 class WaterParams(BaseModel):
     """Lake flattening + stream carving (F-22). Depth/width are print mm;
     defaults come from constants (user-provided 2026-09-03)."""
@@ -20,7 +30,7 @@ class WaterParams(BaseModel):
     lakes: bool = False
     streams: bool = False
     recess_mm: float = constants.WATER_RECESS_MM
-    stream_width_mm: float = constants.STREAM_WIDTH_MM
+    stream_widths_mm: StreamWidths = StreamWidths()
     stream_depth_mm: float = constants.STREAM_DEPTH_MM
 
 
@@ -63,6 +73,9 @@ class GenerateRequest(BaseModel):
     polygon_geojson: dict[str, Any]
     dem_dataset: str
     downsample: int
+    # Bilinear DEM upsample (F-28 W-1): buys placement resolution for water
+    # features; invents no terrain information. Cost is quadratic in triangles.
+    dem_upsample: int = Field(default=1, ge=1, le=4)
     z_scale: float
     target_max_mm: float
     base_thickness_mm: float  # print millimetres (F-17); STL is always sealed (F-19)

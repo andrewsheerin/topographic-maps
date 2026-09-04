@@ -21,10 +21,11 @@ from core.geometry import utm_epsg_from_lon_lat
 METERS_TO_MM = constants.METERS_TO_MM
 
 
-def _prepare_dem(polygon_wgs84, dem_dataset, downsample, tmp):
-    """Shared DEM prep: download -> clip -> reproject to UTM -> re-clip -> read.
-    Returns (dem_arr, px_m, transform, epsg, poly_utm) so callers compute scale
-    from real-world extent."""
+def _prepare_dem(polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample=1):
+    """Shared DEM prep: download -> clip -> reproject to UTM -> re-clip ->
+    read -> optional bilinear upsample (F-28 W-1). Returns (dem_arr, px_m,
+    transform, epsg, poly_utm) so callers compute scale from real-world
+    extent."""
     lon, lat = polygon_wgs84.centroid.coords[0]
     epsg = utm_epsg_from_lon_lat(lon, lat)
 
@@ -45,6 +46,10 @@ def _prepare_dem(polygon_wgs84, dem_dataset, downsample, tmp):
     dem_mod.clip_dem_by_polygon(dem3, poly_utm, epsg, dem4)
 
     dem_arr, px_m, transform = dem_mod.read_dem(dem4, downsample)
+    if int(dem_upsample) > 1:
+        dem_arr, px_m, transform = dem_mod.upsample_dem(
+            dem_arr, transform, dem_upsample, epsg
+        )
     return dem_arr, px_m, transform, epsg, poly_utm
 
 
@@ -81,7 +86,7 @@ def _apply_water(
         streams=bool(water.get("streams")),
     )
     lakes_utm = water_mod.water_to_utm_clipped(lake_polys, epsg, poly_utm)
-    streams_utm = water_mod.water_to_utm_clipped(stream_lines, epsg, poly_utm)
+    streams_utm = water_mod.streams_to_utm_clipped(stream_lines, epsg, poly_utm)
 
     dem_arr, lake_mask = mesh_mod.flatten_water(
         dem_arr,
@@ -94,10 +99,10 @@ def _apply_water(
     dem_arr, stream_mask = mesh_mod.carve_streams(
         dem_arr,
         transform,
-        list(streams_utm.geometry),
+        streams_utm,
         scale_xy,
         z_scale,
-        water.get("stream_width_mm", constants.STREAM_WIDTH_MM),
+        water.get("stream_widths_mm", constants.STREAM_WIDTHS_MM),
         water.get("stream_depth_mm", constants.STREAM_DEPTH_MM),
         protect_mask=lake_mask,
     )
@@ -127,16 +132,24 @@ def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):
 
 
 def _water_geojson_utm(lakes_utm, streams_utm, epsg):
-    """Fetched water as one UTM FeatureCollection, `kind` = lake | stream."""
+    """Fetched water as one UTM FeatureCollection: `kind` = lake | stream,
+    streams also carry their `waterway` class."""
     feats = []
-    for gs, kind in ((lakes_utm, "lake"), (streams_utm, "stream")):
-        if gs is None:
-            continue
-        for geom in gs:
+    if lakes_utm is not None:
+        for geom in lakes_utm:
             feats.append(
                 {
                     "type": "Feature",
-                    "properties": {"kind": kind},
+                    "properties": {"kind": "lake"},
+                    "geometry": geom.__geo_interface__,
+                }
+            )
+    if streams_utm is not None:
+        for wclass, geom in zip(streams_utm["waterway"], streams_utm.geometry):
+            feats.append(
+                {
+                    "type": "Feature",
+                    "properties": {"kind": "stream", "waterway": wclass},
                     "geometry": geom.__geo_interface__,
                 }
             )
@@ -151,6 +164,7 @@ def generate_stl_from_polygon(
     polygon_wgs84,
     dem_dataset,
     downsample,
+    dem_upsample,
     z_scale,
     target_max_mm,
     base_thickness_mm,
@@ -158,7 +172,7 @@ def generate_stl_from_polygon(
 ):
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
-        polygon_wgs84, dem_dataset, downsample, tmp
+        polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 
@@ -197,6 +211,7 @@ def generate_3mf_from_polygon(
     polygon_wgs84,
     dem_dataset,
     downsample,
+    dem_upsample,
     z_scale,
     target_max_mm,
     base_thickness_mm,
@@ -213,7 +228,7 @@ def generate_3mf_from_polygon(
     notes the tradeoff)."""
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
-        polygon_wgs84, dem_dataset, downsample, tmp
+        polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 
@@ -237,6 +252,7 @@ def generate_bundle_from_polygon(
     polygon_wgs84,
     dem_dataset,
     downsample,
+    dem_upsample,
     z_scale,
     target_max_mm,
     base_thickness_mm,
@@ -251,7 +267,7 @@ def generate_bundle_from_polygon(
     nothing toggled, no Overpass call is made."""
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
-        polygon_wgs84, dem_dataset, downsample, tmp
+        polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
     )
     scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
 

@@ -45,20 +45,42 @@ CARVE_DEPTH_CAP_MM = 20.0
 # Source: user-provided 2026-09-03.
 WATER_RECESS_MM = 0.6
 
-# Stream carve width/depth, print mm — same convention as ROAD_WIDTHS_MM: real
-# stream widths are far below one extrusion width at print scale, so print-mm
-# values are used instead. Source: user-provided 2026-09-03.
-STREAM_WIDTH_MM = 1.0
+# Stream carve widths per OSM waterway class and shared depth, print mm —
+# same convention as ROAD_WIDTHS_MM: real stream widths are far below one
+# extrusion width at print scale, so print-mm values are used instead.
+# Wider classes = downstream, so streams taper toward the headwaters (F-28
+# W-4). Source: user-provided 2026-09-03.
+STREAM_WIDTHS_MM = {
+    "river": 1.6,
+    "stream": 1.0,
+    "brook": 0.6,
+}
 STREAM_DEPTH_MM = 0.4
+
+# V-profile cross-section for stream carves (F-28 W-3): (width_fraction,
+# depth_fraction) rings applied shallow-to-deep, same ordering contract as
+# build_carve_plan. Source: user-provided 2026-09-03.
+STREAM_PROFILE = ((1.00, 0.35), (0.60, 0.70), (0.30, 1.00))
+
+# Anti-aliasing factor for the stream carve (F-28 W-2): the buffer is
+# rasterized on a grid this many times finer than the working DEM, then
+# area-averaged back to a fractional depth. Source: user spec 2026-09-03.
+STREAM_AA_FACTOR = 4
+
+# Minimum renderable feature width, print mm: one extrusion line of a 0.4 mm
+# nozzle. Stream widths below max(cell size, this) are clamped (F-28 W-5).
+# Source: user-provided 2026-09-03.
+EXTRUSION_LINE_WIDTH_MM = 0.42
 
 # Percentile of the in-polygon DEM samples used as a lake's plane elevation.
 # COP30 is radar-derived and noisy/void over open water; a low percentile
 # rejects shoreline and noise highs. Source: user spec 2026-09-03.
 WATER_LEVEL_PERCENTILE = 10
 
-# OSM tag selections for water features. Source: user spec 2026-09-03.
+# OSM tag selections for water features. Source: user spec 2026-09-03
+# (brook added with F-28 W-4; note it is rare in OSM tagging).
 WATER_POLYGON_VALUES = ("lake", "reservoir", "pond")  # natural=water + water=…
-WATERWAY_VALUES = ("stream", "river")  # waterway=…
+WATERWAY_VALUES = ("river", "stream", "brook")  # waterway=…
 
 # --- Mesh / print guards -------------------------------------------------
 

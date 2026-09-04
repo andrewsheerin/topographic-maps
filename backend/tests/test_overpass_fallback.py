@@ -123,4 +123,5 @@ def test_water_fetch_is_a_single_overpass_request(monkeypatch):
     assert len(calls) == 1  # lakes + streams share one request (F-26)
     assert len(lakes) == 1 and len(streams) == 1
     assert lakes[0].area > 0
-    assert streams[0].length > 0
+    wclass, line = streams[0]  # (waterway_class, geometry) since F-28
+    assert wclass == "stream" and line.length > 0

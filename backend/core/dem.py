@@ -128,6 +128,36 @@ def reproject_dem(src_path, dst_path, epsg):
             )
 
 
+def upsample_dem(data, transform, factor, epsg):
+    """Bilinear-upsample a DEM array by an integer factor (F-28 W-1).
+
+    Invents no new terrain information — it only buys placement resolution
+    for water carving and coloring (a triangle gets exactly one color, so
+    sub-cell colored streams need a finer grid). NaN nodata is honored by
+    GDAL's resampler (excluded from interpolation weights), so nodata gaps
+    stay gaps. Returns (data, px_m, transform)."""
+    factor = int(factor)
+    if factor <= 1:
+        return data, abs(transform.a), transform
+
+    h, w = data.shape
+    dst_transform = transform * Affine.scale(1.0 / factor)
+    dst = np.full((h * factor, w * factor), np.nan, dtype=np.float32)
+    crs = CRS.from_epsg(epsg)
+    rasterio.warp.reproject(
+        data,
+        dst,
+        src_transform=transform,
+        src_crs=crs,
+        src_nodata=np.nan,
+        dst_transform=dst_transform,
+        dst_crs=crs,
+        dst_nodata=np.nan,
+        resampling=Resampling.bilinear,
+    )
+    return dst, abs(dst_transform.a), dst_transform
+
+
 def read_dem(path, downsample):
     """Read band 1 as float32 metres, optionally averaging-downsampled. Nodata
     is masked to NaN (never silently filled). Returns (data, px_m, transform)."""

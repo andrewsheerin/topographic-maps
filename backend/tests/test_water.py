@@ -7,12 +7,22 @@ delta = mm / (scale_xy * z_scale * METERS_TO_MM); streams carve everywhere
 except inside a flattened lake; the sealed-solid guard still holds afterwards.
 """
 
+import geopandas as gpd
 import numpy as np
 from rasterio.transform import from_origin
 from shapely.geometry import LineString, box
 
 from core.mesh import add_base, carve_streams, dem_to_mesh, flatten_water
 from core.water import _relation_polygon, _way_polygon
+
+
+def stream_gdf(records, epsg=32611):
+    """(waterway_class, LineString) tuples -> the GeoDataFrame carve expects."""
+    return gpd.GeoDataFrame(
+        {"waterway": [c for c, _ in records]},
+        geometry=[g for _, g in records],
+        crs=epsg,
+    )
 
 PX_M = 10.0
 SCALE_XY = 0.001  # mm per metre / METERS_TO_MM
@@ -75,20 +85,19 @@ def test_stream_carves_outside_but_not_through_a_lake():
     lake_z = dem2[4, 4]
 
     # A stream straight across row 4 (y=155), through the middle of lake 1.
-    stream = LineString([(0.0, 155.0), (200.0, 155.0)])
-    # delta = 0.4 / (0.001 * 2.0 * 1000) = 0.2 m
-    dem3, stream_mask = carve_streams(
-        dem2, TRANSFORM, [stream], SCALE_XY, Z_SCALE,
-        width_mm=1.0, depth_mm=0.4, protect_mask=water_mask,
+    streams = stream_gdf([("stream", LineString([(0.0, 155.0), (200.0, 155.0)]))])
+    dem3, color_mask = carve_streams(
+        dem2, TRANSFORM, streams, SCALE_XY, Z_SCALE,
+        {"stream": 1.0}, 0.4, protect_mask=water_mask,
     )
 
-    assert np.all(dem3[4, :2] == np.float32(100.0 - 0.2))  # carved before lake
-    assert np.all(dem3[4, 7:] == np.float32(100.0 - 0.2))  # carved after lake
+    assert np.all(dem3[4, :2] < 100.0)  # carved before the lake
+    assert np.all(dem3[4, 7:] < 100.0)  # carved after the lake
     assert np.all(dem3[4, 2:7] == lake_z)  # lake plane untouched
-    assert np.all(dem3[5:, :] == dem2[5:, :])  # other rows untouched
-    # The mask is exactly the carved cells: row 4 minus the protected lake.
-    assert stream_mask[4, :2].all() and stream_mask[4, 7:].all()
-    assert not stream_mask[4, 2:7].any()
+    assert np.all(dem3[:4, :] == dem2[:4, :])  # other rows untouched
+    # The color mask covers the carved stream but never the protected lake.
+    assert color_mask[4, :2].all() and color_mask[4, 7:].all()
+    assert not color_mask[4, 2:7].any()
 
 
 def test_flatten_and_carve_still_seal_watertight():
@@ -101,8 +110,9 @@ def test_flatten_and_carve_still_seal_watertight():
         dem, transform, [box(51.0, 51.0, 129.0, 129.0)], SCALE_XY, Z_SCALE, 0.6
     )
     dem3, _ = carve_streams(
-        dem2, transform, [LineString([(0.0, 90.0), (300.0, 210.0)])],
-        SCALE_XY, Z_SCALE, width_mm=1.0, depth_mm=0.4, protect_mask=water_mask,
+        dem2, transform,
+        stream_gdf([("river", LineString([(0.0, 90.0), (300.0, 210.0)]))]),
+        SCALE_XY, Z_SCALE, {"river": 1.6}, 0.4, protect_mask=water_mask,
     )
 
     solid = add_base(dem_to_mesh(dem3, PX_M, SCALE_XY, Z_SCALE), 2.0)

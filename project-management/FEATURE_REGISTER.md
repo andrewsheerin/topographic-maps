@@ -39,6 +39,10 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 
 | F-27 | Streams print in the water color in the 3MF (revisits the F-23 tradeoff) | fix | C | DONE | 47334f8 | User saw the Bambu preview 2026-09-03 and chose color despite the extra AMS swaps. Carved stream cells join the water class; lake-protection logic unchanged. |
 
+| F-28 | Stream rendering refinement: W-1 dem_upsample (1–4, bilinear), W-2 anti-aliased fractional-depth carve, W-3 V-profile cross-section, W-4 per-class widths (river/stream/brook), W-5 width floor guard | feature | C | WIP | | User spec + values 2026-09-03. Bilinear upsampling invents no new terrain information — it only buys placement resolution for water features; it is the only fix for colored stream width (a triangle gets one color). AA fixes carve depth below one cell (depth is continuous). |
+| F-29 | Strahler stream ordering for taper (more faithful than OSM waterway class) | idea | later | IDEA | | Candidate successor to F-28's W-4 per-class widths. Needs network topology from the fetched ways. |
+| F-30 | `read_dem` downsample=avg may smear the nodata value (e.g. −9999) into edge cells before the NaN mask is applied | bug | later | IDEA | | Spotted during F-28. Average-resampling happens in `src.read`, nodata→NaN conversion after — edge cells mixing valid+nodata become garbage. Likely tripped only with downsample>1 on clipped rasters. |
+
 ## Dropped
 
 | ID | Item | Why |

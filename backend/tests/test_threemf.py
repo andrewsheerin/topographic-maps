@@ -101,6 +101,7 @@ def test_all_four_classes_present_and_water_wins():
 def test_carved_stream_cells_classify_as_water():
     # F-27: the water mask passed to classification is lakes | streams, so a
     # carved stream in the forest band prints in the water color.
+    import geopandas as gpd
     from rasterio.transform import from_origin
     from shapely.geometry import LineString
 
@@ -108,9 +109,13 @@ def test_carved_stream_cells_classify_as_water():
 
     dem = np.full((6, 6), 900.0, dtype=np.float32)
     transform = from_origin(0.0, 60.0, 10.0, 10.0)
+    streams = gpd.GeoDataFrame(
+        {"waterway": ["stream"]},
+        geometry=[LineString([(0.0, 35.0), (60.0, 35.0)])],
+        crs=32611,
+    )
     _, stream_mask = carve_streams(
-        dem, transform, [LineString([(0.0, 35.0), (60.0, 35.0)])],
-        0.001, 1.0, width_mm=1.0, depth_mm=0.4,
+        dem, transform, streams, 0.001, 1.0, {"stream": 1.0}, 0.4
     )
     assert stream_mask.any()
     cells = classify_terrain_cells(

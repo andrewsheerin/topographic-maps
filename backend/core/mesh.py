@@ -7,6 +7,7 @@ the print scale as mm-per-metre / METERS_TO_MM (i.e. target_mm / extent_mm);
 import numpy as np
 import trimesh
 from rasterio import features
+from rasterio.transform import Affine
 
 import constants
 
@@ -141,53 +142,100 @@ def flatten_water(dem, transform, water_polys, scale_xy, z_scale, recess_mm):
     return dem2, water_mask
 
 
-def carve_streams(
-    dem, transform, stream_lines, scale_xy, z_scale, width_mm, depth_mm,
-    protect_mask=None,
-):
-    """Recess buffered waterway centerlines into the DEM (F-22).
+def stream_width_floor_mm(px_m, scale_xy):
+    """The narrowest renderable stream width, print mm (F-28 W-5): one DEM
+    cell at print scale, or one extrusion line, whichever is larger."""
+    cell_mm = px_m * scale_xy * METERS_TO_MM
+    return max(cell_mm, constants.EXTRUSION_LINE_WIDTH_MM)
 
-    Width/depth are print millimetres (ROAD_WIDTHS_MM convention) — a 10 m
-    creek is under one extrusion width at typical print scale, so real-world
-    widths are unusable. Cells in `protect_mask` (flattened lakes) are left
-    untouched so a stream never carves through its lake's plane.
 
-    Returns (new_dem, stream_mask); the mask is the carved cells, which join
-    the water color class in the 3MF (F-27)."""
-    dem2 = dem.copy()
-    stream_mask = np.zeros(dem.shape, dtype=bool)
-
-    width_mm = _finite_nonneg(width_mm, cap=constants.CARVE_WIDTH_CAP_MM)
-    depth_mm = _finite_nonneg(depth_mm, cap=constants.CARVE_DEPTH_CAP_MM)
-    if width_mm <= 0 or depth_mm <= 0 or len(stream_lines) == 0:
-        return dem2, stream_mask
-
-    delta = depth_mm / (scale_xy * z_scale * METERS_TO_MM)
-    half_m = (width_mm / 2) / (scale_xy * METERS_TO_MM)
-    shapes = [
-        (geom.buffer(half_m), 1)
-        for geom in stream_lines
-        if geom is not None and not geom.is_empty
-    ]
+def _fractional_coverage(geoms_buffered, shape, transform, aa):
+    """Area fraction of each working cell covered by the buffers (F-28 W-2):
+    rasterize on an `aa`-times finer grid (cell-center test, unbiased), then
+    block-average back down to [0, 1] per cell."""
+    shapes = [(g, 1) for g in geoms_buffered if g is not None and not g.is_empty]
     if not shapes:
-        return dem2, stream_mask
+        return np.zeros(shape, dtype=np.float32)
+    h, w = shape
+    fine = features.rasterize(
+        shapes,
+        out_shape=(h * aa, w * aa),
+        transform=transform * Affine.scale(1.0 / aa),
+        fill=0,
+        dtype=np.uint8,
+    )
+    return fine.reshape(h, aa, w, aa).mean(axis=(1, 3), dtype=np.float32)
 
-    stream_mask = (
-        features.rasterize(
-            shapes,
-            out_shape=dem2.shape,
-            transform=transform,
-            fill=0,
-            dtype=np.uint8,
-            all_touched=True,
+
+def carve_streams(
+    dem, transform, gdf_streams, scale_xy, z_scale, widths_mm, depth_mm,
+    protect_mask=None, aa=constants.STREAM_AA_FACTOR,
+):
+    """Recess waterway centerlines into the DEM (F-22, reworked in F-28).
+
+    Widths/depth are print millimetres (ROAD_WIDTHS_MM convention) — real
+    stream widths are far below one extrusion width at print scale. Per
+    waterway class (`gdf_streams.waterway`, widths from `widths_mm`), the
+    carve is a V-profile: STREAM_PROFILE's concentric rings applied
+    shallow-to-deep — the ordering contract build_carve_plan implements for
+    roads — with deeper rings overwriting shallower ones (per-cell max).
+    Each ring's depth is scaled by its fractional cell coverage
+    (anti-aliasing, W-2), so sub-cell widths carve shallow instead of
+    ragged. Requested widths are clamped up to stream_width_floor_mm (W-5).
+
+    Cells in `protect_mask` (flattened lakes) are left untouched. Returns
+    (new_dem, color_mask): color_mask is the cells with ≥50% total coverage,
+    which join the water color class in the 3MF (F-27)."""
+    dem2 = dem.copy()
+    color_mask = np.zeros(dem.shape, dtype=bool)
+
+    depth_mm = _finite_nonneg(depth_mm, cap=constants.CARVE_DEPTH_CAP_MM)
+    if depth_mm <= 0 or len(gdf_streams) == 0:
+        return dem2, color_mask
+
+    px_m = abs(transform.a)
+    floor_mm = stream_width_floor_mm(px_m, scale_xy)
+    delta_full = depth_mm / (scale_xy * z_scale * METERS_TO_MM)
+
+    depth_field = np.zeros(dem.shape, dtype=np.float32)
+    coverage_total = np.zeros(dem.shape, dtype=np.float32)
+
+    for wclass in constants.STREAM_WIDTHS_MM:
+        subset = gdf_streams[gdf_streams["waterway"] == wclass]
+        if subset.empty:
+            continue
+        width_mm = _finite_nonneg(
+            (widths_mm or {}).get(wclass, constants.STREAM_WIDTHS_MM[wclass]),
+            cap=constants.CARVE_WIDTH_CAP_MM,
         )
-        == 1
-    ) & np.isfinite(dem2)
-    if protect_mask is not None:
-        stream_mask &= ~protect_mask
+        if width_mm <= 0:
+            continue
+        width_mm = max(width_mm, floor_mm)  # W-5: clamp, never a ragged chain
 
-    dem2[stream_mask] -= np.float32(delta)
-    return dem2, stream_mask
+        # Shallow-to-deep ring order (build_carve_plan's contract); np.maximum
+        # makes deeper rings win where they overlap the shallower ones.
+        for width_frac, depth_frac in sorted(
+            constants.STREAM_PROFILE, key=lambda p: p[1]
+        ):
+            half_m = (width_mm * width_frac / 2) / (scale_xy * METERS_TO_MM)
+            coverage = _fractional_coverage(
+                subset.geometry.buffer(half_m), dem.shape, transform, aa
+            )
+            np.maximum(
+                depth_field,
+                np.float32(delta_full * depth_frac) * coverage,
+                out=depth_field,
+            )
+            if width_frac == 1.0:
+                np.maximum(coverage_total, coverage, out=coverage_total)
+
+    apply_mask = np.isfinite(dem2) & (depth_field > 0)
+    if protect_mask is not None:
+        apply_mask &= ~protect_mask
+    dem2[apply_mask] -= depth_field[apply_mask]
+
+    color_mask = (coverage_total >= 0.5) & apply_mask
+    return dem2, color_mask
 
 
 def _remove_pinch_cells(cell_ok):
