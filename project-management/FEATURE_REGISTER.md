@@ -47,7 +47,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 
 | F-32 | Dynamic color bands: replace fixed water/forest/rock/snow + treeline/snowline with a user-defined list of elevation bands (up to X m → #hex, add/remove rows, no semantic names); water stays a mask-driven color slot; base/walls take the lowest band's color; cutoffs in absolute metres | feature | C | DONE | 3471c02, 27bbcc2 | User-requested 2026-09-04; water-slot/base-rule/metres confirmed by user. Palette = exactly the entered colors; bands auto-sort; strict-< boundaries preserved. Water slot ALWAYS present (user call mid-build): stable AMS slot 0, paints nothing when water off. Band cap 16. Browser click-through pending user run. |
 
-| F-33 | Ocean water: cells ≤ sea-level threshold flatten to a recessed plane and take the water color (no Overpass fetch — pure elevation) | feature | C | WIP | | For coastal prints (Aquidneck Island / Narragansett Bay). Threshold 0.5 m user-confirmed 2026-09-04; plane = threshold − recess; streams protected from carving the bay. Known limitation: below-sea-level inland basins would classify as ocean. |
+| F-33 | Ocean water: cells ≤ sea-level threshold flatten to a recessed plane and take the water color (no Overpass fetch — pure elevation) | feature | C | DONE | 727eefb | For coastal prints (Aquidneck Island / Narragansett Bay). Threshold 0.5 m user-confirmed 2026-09-04; plane = threshold − recess; streams protected from carving the bay. Known limitation: below-sea-level inland basins would classify as ocean. |
 
 ## Dropped
 

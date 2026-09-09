@@ -1,9 +1,9 @@
 # Current
 
 **Phase:** C — feature growth
-**Register items:** F-28, F-31, F-32 (dynamic color bands) — DONE.
-**Status:** branch stack, tip `feat/F-32-color-bands` ← `feat/F-31-named-streams` ←
-`feat/F-28-stream-refinement` ← … ← `main` (main still at F-20; the whole stack is unmerged).
+**Register items:** F-28, F-31, F-32, F-33 (ocean water) — DONE.
+**Status:** branch stack, tip `feat/F-33-ocean` ← `feat/F-32-color-bands` ←
+`feat/F-31-named-streams` ← … ← `main` (main still at F-20; the whole stack is unmerged).
 
 ## Right now
 F-28 DONE (f4289fa backend, 758bcd5 UI): dem_upsample 1–4 (bilinear, GDAL, NaN-safe),
@@ -13,8 +13,8 @@ backend + warned in UI, cell-size readout on the detail multiplier. 51/51 tests,
 F-29 (Strahler) and F-30 (downsample nodata smear) registered for later.
 
 ## Blocked on
-Yours: merge the stack (tip `feat/F-32-color-bands`); click through the new Color band rows
-and regenerate the Alberta 3MF (named-only default on, detail multiplier 3); D-1/D-2; C-1;
+Yours: merge the stack (tip `feat/F-33-ocean`); regenerate Aquidneck with Add water + Ocean
+checked (sea level 0.5 m) — bay should flatten, recess, and go blue; D-1/D-2; C-1;
 SRTM/NASADEM labels; email in Overpass UA?
 
 ## Next
