@@ -93,6 +93,9 @@ class GenerateRequest(BaseModel):
     # Present when the "Add color" toggle is on (F-25): the ZIP bundle then
     # also contains the colored 3MF.
     color: ColorBands | None = None
+    # F-35: visible frame border width, print mm; None = no frame. The frame
+    # is a second, uncolored solid in the 3MF with clean 90° outer edges.
+    frame_width_mm: float | None = Field(default=None, gt=0, le=100)
 
 
 class Generate3MFRequest(GenerateRequest):

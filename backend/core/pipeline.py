@@ -129,13 +129,39 @@ def _apply_water(
     return dem_arr, protect | stream_mask, lakes_utm, streams_utm
 
 
-def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):
+def _build_frame(dem_arr, px_m, scale_xy, solid, frame_width_mm):
+    """The frame ring for a terrain solid (F-35): inner edge = the largest
+    axis-aligned rectangle inscribed in the terrain footprint (covers the
+    reprojection skew wedges gap-free), outer edge = terrain bbox plus the
+    visible width, height auto-matched to the terrain (base bottom to peak,
+    user call 2026-09-04)."""
+    h, w = dem_arr.shape
+    cell_mm = px_m * scale_xy * METERS_TO_MM
+    r0, r1, c0, c1 = mesh_mod.largest_true_rect(mesh_mod.cell_ok_mask(dem_arr))
+
+    # dem_to_mesh reverses X (east to the right), so column c sits at
+    # x = (w-1-c)·cell. Cells c0..c1 span vertex columns c0..c1+1.
+    inner = (
+        (w - 1 - (c1 + 1)) * cell_mm,
+        r0 * cell_mm,
+        (w - 1 - c0) * cell_mm,
+        (r1 + 1) * cell_mm,
+    )
+    fw = float(frame_width_mm)
+    outer = (-fw, -fw, (w - 1) * cell_mm + fw, (h - 1) * cell_mm + fw)
+    z0 = float(solid.vertices[:, 2].min())
+    z1 = float(solid.vertices[:, 2].max())
+    return mesh_mod.frame_solid(inner, outer, z0, z1)
+
+
+def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color, frame=None):
     """Write the colored 3MF for a sealed solid (F-32: dynamic bands).
 
     `color` is the ColorBands dict: water_color (or None) + bands, each
     {upto_m, color}. Bands sort by cutoff (only the highest may omit it);
     the palette is [water_color?] + band colors, and base/walls take the
-    lowest band's color."""
+    lowest band's color. `frame` (F-35) is written as a second, uncolored
+    object — its filament is assigned in the slicer."""
     bands = sorted(
         color["bands"],
         key=lambda b: (b["upto_m"] is None, b["upto_m"] or 0.0),
@@ -161,6 +187,9 @@ def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):
         face_cls,
         palette,
         default_index=1,  # base/walls print in the lowest band
+        extra_meshes=(
+            [(frame.vertices, frame.faces)] if frame is not None else []
+        ),
     )
     return out_path
 
@@ -253,13 +282,15 @@ def generate_3mf_from_polygon(
     road_levels=None,
     road_etch=None,
     water=None,
+    frame_width_mm=None,
 ):
     """Colored 3MF export (F-23): the same terrain pipeline as the STL, plus a
     per-face class raster written via the 3MF Materials extension.
 
     `color` is the ColorBands dict (per-request user values). Streams and
     roads carve geometry but carry no color in this version (register F-23
-    notes the tradeoff)."""
+    notes the tradeoff). frame_width_mm (F-35) adds the clean-edge frame as
+    a second object."""
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
         polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
@@ -278,8 +309,13 @@ def generate_3mf_from_polygon(
     surface = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
     solid = mesh_mod.add_base(surface, float(base_thickness_mm))
 
+    frame = (
+        _build_frame(dem_arr, px_m, scale_xy, solid, frame_width_mm)
+        if frame_width_mm
+        else None
+    )
     out = os.path.join(tmp, "terrain.3mf")
-    return _write_colored_3mf(out, dem_arr, water_mask, solid, color)
+    return _write_colored_3mf(out, dem_arr, water_mask, solid, color, frame=frame)
 
 
 def generate_bundle_from_polygon(
@@ -294,6 +330,7 @@ def generate_bundle_from_polygon(
     road_etch=None,
     water=None,
     color=None,
+    frame_width_mm=None,
 ):
     """The "everything" ZIP (F-25): raw STL + carved STL always; plus the
     colored 3MF when `color` is set, and UTM GeoJSON of whichever features
@@ -334,12 +371,20 @@ def generate_bundle_from_polygon(
         z.write(carved_stl, "terrain_carved.stl")
 
         if color:
+            frame = (
+                _build_frame(
+                    carved_dem, px_m, scale_xy, carved_solid, frame_width_mm
+                )
+                if frame_width_mm
+                else None
+            )
             threemf_path = _write_colored_3mf(
                 os.path.join(tmp, "terrain.3mf"),
                 carved_dem,
                 water_mask,
                 carved_solid,
                 color,
+                frame=frame,
             )
             z.write(threemf_path, "terrain.3mf")
 

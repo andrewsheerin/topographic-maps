@@ -48,6 +48,7 @@ def generate_3mf(req: Generate3MFRequest):
             road_levels=req.road_levels,
             road_etch=req.road_etch.model_dump(),
             water=req.water.model_dump(),
+            frame_width_mm=req.frame_width_mm,
         )
         return FileResponse(path, filename="terrain.3mf", media_type="model/3mf")
     except RuntimeError as e:
@@ -72,6 +73,7 @@ def generate_bundle(req: GenerateRequest):
             road_etch=req.road_etch.model_dump(),
             water=req.water.model_dump(),
             color=req.color.model_dump() if req.color else None,
+            frame_width_mm=req.frame_width_mm,
         )
         return FileResponse(
             zip_path, filename="terrain_bundle.zip", media_type="application/zip"

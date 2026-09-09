@@ -7,11 +7,41 @@ export default function OutputSection({
   onGenerateBundle,
   threemfDisabled,
   zipDisabled,
+  frame,
+  onFrameChange,
   status,
 }) {
   return (
     <section>
       <h2>6. Output</h2>
+
+      <div className={styles.frameRow}>
+        <label className={styles.frameCheck}>
+          <input
+            type="checkbox"
+            className={styles.checkbox}
+            checked={frame.enabled}
+            onChange={(e) => onFrameChange('enabled', e.target.checked)}
+          />
+          <span>Add frame (3MF) — clean 90° outer edges</span>
+        </label>
+        {frame.enabled && (
+          <>
+            <label className={styles.frameLabel} htmlFor="frameWidth">
+              Width (mm)
+            </label>
+            <input
+              id="frameWidth"
+              className={styles.frameNum}
+              type="number"
+              step="0.5"
+              min="0.5"
+              value={frame.width}
+              onChange={(e) => onFrameChange('width', e.target.value)}
+            />
+          </>
+        )}
+      </div>
 
       <div className={styles.row}>
         <Button variant="primary" onClick={onGenerateStl}>
