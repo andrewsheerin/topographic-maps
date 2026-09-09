@@ -1,7 +1,7 @@
 # Current
 
 **Phase:** C — feature growth
-**Register items:** F-28, F-31..F-35 (frame solid) — DONE.
+**Register items:** F-28, F-31..F-35 (clean-edge clip; reworked from frame per user) — DONE.
 **Status:** branch stack, tip `feat/F-35-frame` ← `feat/F-34-auto-resolution` ←
 `feat/F-33-ocean` ← … ← `main` (main still at F-20; the whole stack is unmerged).
 
@@ -14,8 +14,8 @@ F-29 (Strahler) and F-30 (downsample nodata smear) registered for later.
 
 ## Blocked on
 Yours: merge the stack (tip `feat/F-35-frame`); hard-refresh, regenerate Aquidneck with Ocean
-+ Auto resolution + Add frame — expect blue bay, ~180k triangles, and a second frame part in
-Bambu (assign its filament there); D-1/D-2; C-1; SRTM/NASADEM labels; email in Overpass UA?
++ Auto resolution + Straight edges — expect blue bay, ~180k triangles, one terrain solid with
+true 90° corners; D-1/D-2; C-1; SRTM/NASADEM labels; email in Overpass UA?
 
 ## Next
 F-29 Strahler taper if F-28 prints well; Phase B correctness (D-1/D-2 → F-2, F-4, F-5); F-6.

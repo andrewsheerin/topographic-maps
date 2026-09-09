@@ -65,7 +65,8 @@ One line each — what makes autonomous tiers auditable. Newest first.
 
 | Date | Decision | Why |
 | --- | --- | --- |
-| 2026-09-04 | F-35 frame is uncolored in the 3MF (object without pid); frame overlaps the terrain's ragged margin as interpenetrating solids | Slicer assigns the frame filament per part; Bambu handles overlapping solids, so no boolean subtraction needed |
+| 2026-09-04 | ~~F-35 frame is uncolored, overlapping solid~~ Superseded same day: frame approach replaced by pre-mesh DEM clip (user clarified intent) | Clipping before meshing gets straight edges from the normal grid path — no second object, no boolean, less code |
+| 2026-09-04 | F-35 print scale computed after the clean-edge clip | Target max size applies to what actually prints, not the pre-clip extent |
 | 2026-09-04 | F-34 auto-resolution targets one cell ≈ at-or-below 0.42 mm (the F-28 extrusion constant): floor() when coarsening, ceil() when refining | Never coarser than the printer can render; the 0.42 anchor is already user-owned |
 | 2026-09-04 | F-32: band cap 16; bands auto-sort by cutoff (UI order cosmetic); boundary stays strict `<` (a cell at exactly the cutoff takes the higher band) | Cap leaves AMS headroom under 3MF's 32-color limit; strict `<` preserves the old treeline/snowline behavior bit-for-bit |
 | 2026-09-04 | F-31 "Named streams only" defaults ON | It's the accepted fix for the dense-gully complaint; flip the checkbox for areas where mappers name nothing — override the default if you disagree |
