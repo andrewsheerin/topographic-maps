@@ -36,7 +36,7 @@ def test_largest_true_rect_exact_on_simple_block():
 
 
 def test_largest_true_rect_raises_on_empty():
-    with pytest.raises(RuntimeError, match="frame"):
+    with pytest.raises(RuntimeError, match="clean-edge clip"):
         largest_true_rect(np.zeros((5, 5), dtype=bool))
 
 
