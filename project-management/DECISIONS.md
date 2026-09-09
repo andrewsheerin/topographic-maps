@@ -65,6 +65,7 @@ One line each — what makes autonomous tiers auditable. Newest first.
 
 | Date | Decision | Why |
 | --- | --- | --- |
+| 2026-09-04 | F-32: band cap 16; bands auto-sort by cutoff (UI order cosmetic); boundary stays strict `<` (a cell at exactly the cutoff takes the higher band) | Cap leaves AMS headroom under 3MF's 32-color limit; strict `<` preserves the old treeline/snowline behavior bit-for-bit |
 | 2026-09-04 | F-31 "Named streams only" defaults ON | It's the accepted fix for the dense-gully complaint; flip the checkbox for areas where mappers name nothing — override the default if you disagree |
 | 2026-09-03 | F-28: 3MF stream color mask = cells with ≥50% buffer coverage | A triangle gets one color; majority threshold keeps painted width honest against the carved geometry |
 | 2026-09-03 | F-28: width floor clamps in the backend (exact, from the projected raster) and warns in the UI (bbox approximation) | UI-only clamping would drift from the true cell size; backend-only would be silent |

@@ -129,15 +129,12 @@ def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):
             "Only the highest color band may leave its 'up to' elevation empty."
         )
 
-    water_color = color.get("water_color")
-    band_offset = 1 if water_color else 0
-    palette = ([water_color] if water_color else []) + [b["color"] for b in bands]
+    # The water slot is always palette index 0 (stable AMS slot order); with
+    # water off the mask is None and the color simply paints nothing.
+    palette = [color["water_color"]] + [b["color"] for b in bands]
 
     cell_cls = mesh_mod.classify_terrain_cells(
-        dem_arr,
-        water_mask if water_color else None,
-        cutoffs_m,
-        band_offset=band_offset,
+        dem_arr, water_mask, cutoffs_m, band_offset=1
     )
     face_cls = mesh_mod.face_classes_for_solid(dem_arr, cell_cls, len(solid.faces))
     threemf_mod.write_3mf(
@@ -146,7 +143,7 @@ def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):
         solid.faces,
         face_cls,
         palette,
-        default_index=band_offset,  # base/walls print in the lowest band
+        default_index=1,  # base/walls print in the lowest band
     )
     return out_path
 

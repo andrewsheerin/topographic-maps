@@ -186,7 +186,7 @@ def test_write_colored_3mf_sorts_bands_and_builds_palette(tmp_path):
 
     # Two unbounded bands is a user error, said plainly.
     bad = {
-        "water_color": None,
+        "water_color": "#001489",
         "bands": [
             {"upto_m": None, "color": "#FFFFFF"},
             {"upto_m": None, "color": "#000000"},

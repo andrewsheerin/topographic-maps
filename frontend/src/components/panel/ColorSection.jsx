@@ -6,10 +6,10 @@ const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 export const MAX_BANDS = 16;
 
 // Every field is required — cutoffs and colors are the user's per print
-// (F-32: no built-in classes, no defaults). `waterOn` adds the mask-driven
-// water slot to the requirement.
-export function colorComplete(c, waterOn) {
-  if (waterOn && !HEX_RE.test(c.water)) return false;
+// (F-32: no built-in classes, no defaults). The water slot is always part
+// of the palette (stable slot order); it paints nothing when water is off.
+export function colorComplete(c) {
+  if (!HEX_RE.test(c.water)) return false;
   if (c.bands.length < 1) return false;
   return c.bands.every((b, i) => {
     if (!HEX_RE.test(b.color)) return false;
@@ -21,7 +21,6 @@ export function colorComplete(c, waterOn) {
 export default function ColorSection({
   enabled,
   onToggle,
-  waterOn,
   color,
   onChange,
   onBandChange,
@@ -95,23 +94,22 @@ export default function ColorSection({
             Add band
           </Button>
 
-          {waterOn && (
-            <div className={styles.waterSlot}>
-              <label className={styles.fieldLabel} htmlFor="waterColor">
-                Lakes &amp; streams
-                <input
-                  id="waterColor"
-                  type="text"
-                  placeholder="#RRGGBB"
-                  value={color.water}
-                  onChange={(e) => onChange('water', e.target.value)}
-                />
-              </label>
-              <p className={styles.hint}>
-                Painted on the fetched water shapes, whatever their elevation.
-              </p>
-            </div>
-          )}
+          <div className={styles.waterSlot}>
+            <label className={styles.fieldLabel} htmlFor="waterColor">
+              Lakes &amp; streams
+              <input
+                id="waterColor"
+                type="text"
+                placeholder="#RRGGBB"
+                value={color.water}
+                onChange={(e) => onChange('water', e.target.value)}
+              />
+            </label>
+            <p className={styles.hint}>
+              Painted on fetched water shapes, whatever their elevation —
+              needs &quot;Add water&quot; to have shapes to paint.
+            </p>
+          </div>
         </div>
       )}
     </section>

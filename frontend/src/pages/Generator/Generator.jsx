@@ -222,9 +222,9 @@ export default function Generator() {
         stream_depth_mm: Number(water.streamDepth || 0),
       },
       color:
-        features.color && colorComplete(color3mf, features.water)
+        features.color && colorComplete(color3mf)
           ? {
-              water_color: features.water ? color3mf.water : null,
+              water_color: color3mf.water,
               bands: color3mf.bands.map((b, i) => ({
                 upto_m:
                   i === color3mf.bands.length - 1 ? null : Number(b.upto),
@@ -439,7 +439,6 @@ export default function Generator() {
         <ColorSection
           enabled={features.color}
           onToggle={(v) => toggleFeature('color', v)}
-          waterOn={features.water}
           color={color3mf}
           onChange={updateColor3mf}
           onBandChange={updateColorBand}
@@ -452,10 +451,10 @@ export default function Generator() {
           onGenerate3mf={handleGenerate3mf}
           onGenerateBundle={handleGenerateBundle}
           threemfDisabled={
-            !(features.color && colorComplete(color3mf, features.water))
+            !(features.color && colorComplete(color3mf))
           }
           zipDisabled={
-            features.color && !colorComplete(color3mf, features.water)
+            features.color && !colorComplete(color3mf)
           }
           status={status}
         />

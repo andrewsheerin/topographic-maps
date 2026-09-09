@@ -65,11 +65,12 @@ class ElevationBand(BaseModel):
 class ColorBands(BaseModel):
     """Dynamic 3MF palette (F-32): user-defined elevation bands with no
     baked-in classes. Cutoffs are absolute metres and belong to the user
-    (science-integrity) — no defaults. water_color paints the fetched
-    lake/stream masks; None when water is disabled. Band cap 16 keeps AMS
-    headroom under 3MF's 32-color limit."""
+    (science-integrity) — no defaults. water_color is always present (user
+    call 2026-09-04): palette slot 0 stays stable across prints; it paints
+    the fetched lake/stream masks and simply paints nothing when water is
+    off. Band cap 16 keeps AMS headroom under 3MF's 32-color limit."""
 
-    water_color: str | None = Field(default=None, pattern=_HEX)
+    water_color: str = Field(pattern=_HEX)
     bands: list[ElevationBand] = Field(min_length=1, max_length=16)
 
 
