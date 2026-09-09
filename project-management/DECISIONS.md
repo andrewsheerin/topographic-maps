@@ -65,6 +65,7 @@ One line each — what makes autonomous tiers auditable. Newest first.
 
 | Date | Decision | Why |
 | --- | --- | --- |
+| 2026-09-04 | F-34 auto-resolution targets one cell ≈ at-or-below 0.42 mm (the F-28 extrusion constant): floor() when coarsening, ceil() when refining | Never coarser than the printer can render; the 0.42 anchor is already user-owned |
 | 2026-09-04 | F-32: band cap 16; bands auto-sort by cutoff (UI order cosmetic); boundary stays strict `<` (a cell at exactly the cutoff takes the higher band) | Cap leaves AMS headroom under 3MF's 32-color limit; strict `<` preserves the old treeline/snowline behavior bit-for-bit |
 | 2026-09-04 | F-31 "Named streams only" defaults ON | It's the accepted fix for the dense-gully complaint; flip the checkbox for areas where mappers name nothing — override the default if you disagree |
 | 2026-09-03 | F-28: 3MF stream color mask = cells with ≥50% buffer coverage | A triangle gets one color; majority threshold keeps painted width honest against the carved geometry |
