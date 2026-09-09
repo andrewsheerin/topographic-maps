@@ -51,7 +51,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 
 | F-34 | Auto resolution: "Detail multiplier" renamed "Upsample factor"; downsample + upsample auto-default from area/dataset/print size to land cells near the 0.42 mm extrusion width (editable via an Auto toggle); cell-size + triangle-count readout | feature | C | DONE | c355ee8 | User-requested 2026-09-04 after a 15.7M-triangle Aquidneck 3MF (36 km box at 100 mm = 0.083 mm cells at 1×; multiplier 3 made it 9× worse). Auto is frontend-only — the backend still gets explicit factors, never resamples silently (F-28 rule). |
 
-| F-35 | Frame solid in the 3MF: separate watertight rectangular ring object with clean 90° outer edges covering the reprojection stair-step margin (UTM grid convergence skews drawn lat/lon rects ~1–2°) | feature | C | WIP | | User-proposed 2026-09-04 to kill CAD post-work. Auto height = tallest terrain (user pick); width field default 5 mm (user pick). Inner edge = largest axis-aligned rect inscribed in the terrain footprint, so skew wedges are covered gap-free. 3MF paths only (STL unchanged); frame object carries no color — assign its filament in the slicer. |
+| F-35 | Frame solid in the 3MF: separate watertight rectangular ring object with clean 90° outer edges covering the reprojection stair-step margin (UTM grid convergence skews drawn lat/lon rects ~1–2°) | feature | C | DONE | a3031b2 | User-proposed 2026-09-04 to kill CAD post-work. Auto height = tallest terrain (user pick); width field default 5 mm (user pick). Inner edge = largest axis-aligned rect inscribed in the terrain footprint, so skew wedges are covered gap-free. 3MF paths only (STL unchanged); frame object carries no color — assign its filament in the slicer. |
 
 ## Dropped
 

@@ -1,9 +1,9 @@
 # Current
 
 **Phase:** C — feature growth
-**Register items:** F-28, F-31, F-32, F-33, F-34 (auto resolution) — DONE.
-**Status:** branch stack, tip `feat/F-34-auto-resolution` ← `feat/F-33-ocean` ←
-`feat/F-32-color-bands` ← … ← `main` (main still at F-20; the whole stack is unmerged).
+**Register items:** F-28, F-31..F-35 (frame solid) — DONE.
+**Status:** branch stack, tip `feat/F-35-frame` ← `feat/F-34-auto-resolution` ←
+`feat/F-33-ocean` ← … ← `main` (main still at F-20; the whole stack is unmerged).
 
 ## Right now
 F-28 DONE (f4289fa backend, 758bcd5 UI): dem_upsample 1–4 (bilinear, GDAL, NaN-safe),
@@ -13,9 +13,9 @@ backend + warned in UI, cell-size readout on the detail multiplier. 51/51 tests,
 F-29 (Strahler) and F-30 (downsample nodata smear) registered for later.
 
 ## Blocked on
-Yours: merge the stack (tip `feat/F-34-auto-resolution`); hard-refresh, then regenerate
-Aquidneck with Ocean checked + Auto resolution on (expect ~180k triangles, not 15.7M, and a
-blue bay); D-1/D-2; C-1; SRTM/NASADEM labels; email in Overpass UA?
+Yours: merge the stack (tip `feat/F-35-frame`); hard-refresh, regenerate Aquidneck with Ocean
++ Auto resolution + Add frame — expect blue bay, ~180k triangles, and a second frame part in
+Bambu (assign its filament there); D-1/D-2; C-1; SRTM/NASADEM labels; email in Overpass UA?
 
 ## Next
 F-29 Strahler taper if F-28 prints well; Phase B correctness (D-1/D-2 → F-2, F-4, F-5); F-6.
