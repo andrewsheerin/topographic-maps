@@ -49,6 +49,8 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 
 | F-33 | Ocean water: cells ≤ sea-level threshold flatten to a recessed plane and take the water color (no Overpass fetch — pure elevation) | feature | C | DONE | 727eefb | For coastal prints (Aquidneck Island / Narragansett Bay). Threshold 0.5 m user-confirmed 2026-09-04; plane = threshold − recess; streams protected from carving the bay. Known limitation: below-sea-level inland basins would classify as ocean. |
 
+| F-34 | Auto resolution: "Detail multiplier" renamed "Upsample factor"; downsample + upsample auto-default from area/dataset/print size to land cells near the 0.42 mm extrusion width (editable via an Auto toggle); cell-size + triangle-count readout | feature | C | WIP | | User-requested 2026-09-04 after a 15.7M-triangle Aquidneck 3MF (36 km box at 100 mm = 0.083 mm cells at 1×; multiplier 3 made it 9× worse). Auto is frontend-only — the backend still gets explicit factors, never resamples silently (F-28 rule). |
+
 ## Dropped
 
 | ID | Item | Why |

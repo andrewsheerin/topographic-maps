@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import MapView from '../../components/MapView/MapView.jsx';
 import AreaSection from '../../components/panel/AreaSection.jsx';
@@ -10,7 +10,7 @@ import ColorSection, {
 } from '../../components/panel/ColorSection.jsx';
 import OutputSection from '../../components/panel/OutputSection.jsx';
 import * as api from '../../lib/api.js';
-import { maxExtentMeters, squareAroundPoint } from '../../lib/geometry.js';
+import { extentMeters, squareAroundPoint } from '../../lib/geometry.js';
 import styles from './Generator.module.css';
 
 // Nominal dataset resolutions in metres — drives the cell-size readout only;
@@ -42,6 +42,9 @@ const DEFAULT_TERRAIN = {
   demDataset: 'USGS10m',
   downsample: '1',
   demUpsample: '1',
+  // F-34: when on, downsample/demUpsample track the auto-computed values
+  // that land cells near the extrusion width; uncheck to edit by hand.
+  autoRes: true,
   zScale: '2.0',
   targetMaxMm: '200',
   baseThicknessMm: '2',
@@ -158,20 +161,61 @@ export default function Generator() {
     [roads],
   );
 
+  const extents = useMemo(
+    () => (polygon ? extentMeters(polygon) : null),
+    [polygon],
+  );
+
+  // F-34: the downsample/upsample pair that lands one cell nearest the
+  // extrusion width (never coarser) for the current area, dataset, and size.
+  const autoFactors = useMemo(() => {
+    const resM = DATASET_RES_M[terrain.demDataset];
+    const targetMm = Number(terrain.targetMaxMm) || 0;
+    if (!extents || !resM || targetMm <= 0) return null;
+    const cellAt1x = resM * (targetMm / extents.maxM);
+    if (cellAt1x < EXTRUSION_LINE_WIDTH_MM) {
+      // Oversampled: coarsen, staying at or below one extrusion line.
+      const ds = Math.floor(EXTRUSION_LINE_WIDTH_MM / cellAt1x);
+      return { downsample: Math.min(20, Math.max(1, ds)), upsample: 1 };
+    }
+    // Undersampled: refine, staying at or below one extrusion line.
+    const us = Math.ceil(cellAt1x / EXTRUSION_LINE_WIDTH_MM);
+    return { downsample: 1, upsample: Math.min(4, Math.max(1, us)) };
+  }, [extents, terrain.demDataset, terrain.targetMaxMm]);
+
+  // Auto mode keeps the (still-visible) fields in sync with the computation.
+  useEffect(() => {
+    if (!terrain.autoRes || !autoFactors) return;
+    const ds = String(autoFactors.downsample);
+    const us = String(autoFactors.upsample);
+    if (terrain.downsample !== ds || terrain.demUpsample !== us) {
+      setTerrain((t) => ({ ...t, downsample: ds, demUpsample: us }));
+    }
+  }, [terrain.autoRes, terrain.downsample, terrain.demUpsample, autoFactors]);
+
   // Approximate print-mm size of one DEM cell for the current area/settings
   // (F-28): drives the detail readout and the stream width floor. Null until
   // an area is set.
   const cellMm = useMemo(() => {
-    if (!polygon) return null;
-    const maxDimM = maxExtentMeters(polygon);
     const resM = DATASET_RES_M[terrain.demDataset];
-    if (!maxDimM || !resM) return null;
+    const targetMm = Number(terrain.targetMaxMm) || 0;
+    if (!extents || !resM || targetMm <= 0) return null;
     const downsample = Math.max(1, Number(terrain.downsample) || 1);
     const upsample = Math.max(1, Number(terrain.demUpsample) || 1);
-    const targetMm = Number(terrain.targetMaxMm) || 0;
-    if (targetMm <= 0) return null;
-    return ((resM * downsample) / upsample) * (targetMm / maxDimM);
-  }, [polygon, terrain]);
+    return ((resM * downsample) / upsample) * (targetMm / extents.maxM);
+  }, [extents, terrain]);
+
+  // Rough face count for the sealed solid: surface + mirrored bottom, walls
+  // negligible. Warns before a 15M-triangle export, not after (F-34).
+  const triEstimate = useMemo(() => {
+    const resM = DATASET_RES_M[terrain.demDataset];
+    if (!extents || !resM) return null;
+    const downsample = Math.max(1, Number(terrain.downsample) || 1);
+    const upsample = Math.max(1, Number(terrain.demUpsample) || 1);
+    const effResM = (resM * downsample) / upsample;
+    const cells = (extents.widthM / effResM) * (extents.heightM / effResM);
+    return 4 * cells;
+  }, [extents, terrain]);
 
   const widthFloorMm = useMemo(
     () => (cellMm == null ? null : Math.max(cellMm, EXTRUSION_LINE_WIDTH_MM)),
@@ -420,7 +464,12 @@ export default function Generator() {
           onClearArea={handleClearArea}
         />
 
-        <TerrainParams terrain={terrain} onChange={updateTerrain} cellMm={cellMm} />
+        <TerrainParams
+          terrain={terrain}
+          onChange={updateTerrain}
+          cellMm={cellMm}
+          triEstimate={triEstimate}
+        />
 
         <RoadsSection
           enabled={features.roads}

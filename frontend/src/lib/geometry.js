@@ -34,10 +34,11 @@ export function circleToPolygonFeature(circle, steps = 64) {
   };
 }
 
-// Approximate max bbox extent of a WGS84 Feature in metres. Display-only —
-// drives the cell-size readout and width-floor hint (F-28 W-5); the backend
-// computes the exact value from the projected DEM.
-export function maxExtentMeters(feature) {
+// Approximate bbox extents of a WGS84 Feature in metres. Display-only —
+// drives the cell-size/triangle readouts, the width-floor hint (F-28 W-5),
+// and the auto resolution defaults (F-34); the backend computes exact values
+// from the projected DEM.
+export function extentMeters(feature) {
   let minLon = Infinity;
   let maxLon = -Infinity;
   let minLat = Infinity;
@@ -57,7 +58,7 @@ export function maxExtentMeters(feature) {
   const midLatRad = (((minLat + maxLat) / 2) * Math.PI) / 180;
   const widthM = (maxLon - minLon) * METERS_PER_DEG_LAT * Math.cos(midLatRad);
   const heightM = (maxLat - minLat) * METERS_PER_DEG_LAT;
-  return Math.max(widthM, heightM);
+  return { widthM, heightM, maxM: Math.max(widthM, heightM) };
 }
 
 // A square of side `sideKm` centred on (lat, lng), as a polygon Feature.

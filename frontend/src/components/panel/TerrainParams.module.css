@@ -1,0 +1,22 @@
+.autoRes {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+.resReadout {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  margin: 0 0 var(--space-3) 0;
+}
