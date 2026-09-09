@@ -29,6 +29,9 @@ class WaterParams(BaseModel):
 
     lakes: bool = False
     streams: bool = False
+    # F-33: flatten cells <= sea_level_m to a recessed plane (no fetch).
+    sea: bool = False
+    sea_level_m: float = constants.SEA_LEVEL_MAX_M
     # F-31: keep only waterways with a `name` tag (unnamed = mostly traced
     # gullies). Defaults on — the dense-network complaint that motivated it.
     named_only: bool = True

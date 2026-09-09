@@ -69,6 +69,30 @@ export default function WaterSection({
             <input
               type="checkbox"
               className={styles.checkbox}
+              checked={water.sea}
+              onChange={(e) => onChange('sea', e.target.checked)}
+            />
+            <span className={styles.name}>Ocean</span>
+          </label>
+
+          <label className={styles.numLabel} htmlFor="seaLevel">
+            Sea level (m)
+          </label>
+          <input
+            id="seaLevel"
+            className={styles.num}
+            type="number"
+            step="0.1"
+            value={water.seaLevel}
+            onChange={(e) => onChange('seaLevel', e.target.value)}
+          />
+        </div>
+
+        <div className={styles.waterRow}>
+          <label className={styles.check}>
+            <input
+              type="checkbox"
+              className={styles.checkbox}
               checked={water.streams}
               onChange={(e) => onChange('streams', e.target.checked)}
             />

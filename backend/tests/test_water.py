@@ -12,7 +12,13 @@ import numpy as np
 from rasterio.transform import from_origin
 from shapely.geometry import LineString, box
 
-from core.mesh import add_base, carve_streams, dem_to_mesh, flatten_water
+from core.mesh import (
+    add_base,
+    carve_streams,
+    dem_to_mesh,
+    flatten_sea,
+    flatten_water,
+)
 from core.water import _relation_polygon, _way_polygon
 
 
@@ -119,6 +125,32 @@ def test_flatten_and_carve_still_seal_watertight():
     assert solid.is_watertight
     assert solid.is_winding_consistent
     assert solid.volume > 0
+
+
+def test_sea_flattens_to_recessed_plane_and_protects_from_streams():
+    # Coastal DEM (F-33): noisy ocean around 0 m, land at 50 m, one NaN hole.
+    rng = np.random.default_rng(21)
+    dem = np.full((20, 20), 50.0, dtype=np.float32)
+    dem[:, :8] = rng.uniform(-0.4, 0.4, (20, 8))  # the bay
+    dem[0, 0] = np.nan
+
+    # delta = 0.6 / (0.001 * 2.0 * 1000) = 0.3 m; plane = 0.5 - 0.3 = 0.2
+    dem2, sea_mask = flatten_sea(dem, 0.5, SCALE_XY, Z_SCALE, 0.6)
+
+    assert sea_mask[1:, :8].all() and not sea_mask[:, 8:].any()
+    assert not sea_mask[0, 0]  # NaN is never sea
+    assert np.all(dem2[sea_mask] == np.float32(0.5 - 0.3))
+    assert np.all(dem2[:, 8:] == 50.0)  # land untouched
+    assert np.isnan(dem2[0, 0])
+
+    # A stream flowing into the bay carves land but never the sea plane.
+    stream = LineString([(0.0, 155.0), (200.0, 155.0)])
+    dem3, _ = carve_streams(
+        dem2, TRANSFORM, stream_gdf([("stream", stream)]),
+        SCALE_XY, Z_SCALE, {"stream": 1.0}, 0.4, protect_mask=sea_mask,
+    )
+    assert np.all(dem3[4, :8] == np.float32(0.2))  # bay plane intact
+    assert np.all(dem3[4, 8:] < 50.0)  # land carved
 
 
 def test_way_polygon_parses_closed_ways_only():

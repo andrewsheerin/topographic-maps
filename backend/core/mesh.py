@@ -142,6 +142,23 @@ def flatten_water(dem, transform, water_polys, scale_xy, z_scale, recess_mm):
     return dem2, water_mask
 
 
+def flatten_sea(dem, sea_level_m, scale_xy, z_scale, recess_mm):
+    """Flatten every cell at or below sea level to one recessed plane (F-33).
+
+    Ocean needs no fetch — COP30 sits at ~0 m (noisy) over open water, so an
+    elevation threshold is the mask. The plane is sea_level_m minus the same
+    print-mm recess lakes use. Returns (new_dem, sea_mask); the mask joins
+    the water color class and protects the bay from stream carves. Known
+    limitation: below-sea-level inland basins would also match."""
+    dem2 = dem.copy()
+    sea_mask = np.isfinite(dem) & (dem <= float(sea_level_m))
+    if sea_mask.any():
+        recess_mm = _finite_nonneg(recess_mm, cap=constants.CARVE_DEPTH_CAP_MM)
+        delta = recess_mm / (scale_xy * z_scale * METERS_TO_MM)
+        dem2[sea_mask] = np.float32(float(sea_level_m) - delta)
+    return dem2, sea_mask
+
+
 def stream_width_floor_mm(px_m, scale_xy):
     """The narrowest renderable stream width, print mm (F-28 W-5): one DEM
     cell at print scale, or one extrusion line, whichever is larger."""

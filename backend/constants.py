@@ -72,6 +72,12 @@ STREAM_AA_FACTOR = 4
 # Source: user-provided 2026-09-03.
 EXTRUSION_LINE_WIDTH_MM = 0.42
 
+# Ocean threshold, metres (F-33): cells at or below this flatten to a
+# recessed sea plane and take the water color. Headroom over COP30's radar
+# noise at ~0 m without swallowing coastal lowland.
+# Source: user-confirmed 2026-09-04.
+SEA_LEVEL_MAX_M = 0.5
+
 # Percentile of the in-polygon DEM samples used as a lake's plane elevation.
 # COP30 is radar-derived and noisy/void over open water; a low percentile
 # rejects shoreline and noise highs. Source: user spec 2026-09-03.

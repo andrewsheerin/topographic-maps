@@ -73,19 +73,35 @@ def _scale_xy_from_extent(dem_arr, transform, target_max_mm):
 def _apply_water(
     dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
 ):
-    """Fetch water and apply it to the DEM (F-22): flatten each lake to its own
-    plane first, then carve streams (lakes protected). Returns
+    """Apply water to the DEM (F-22/F-33): flatten the sea plane first, then
+    each lake to its own plane, then carve streams (sea and lakes protected).
+    Sea needs no fetch; Overpass is hit only for lakes/streams. Returns
     (dem, water_mask, lakes_utm, streams_utm); the last three are None when
     water is disabled."""
-    if not water or not (water.get("lakes") or water.get("streams")):
+    wants_sea = bool(water and water.get("sea"))
+    wants_fetch = bool(water and (water.get("lakes") or water.get("streams")))
+    if not (wants_sea or wants_fetch):
         return dem_arr, None, None, None
 
-    lake_polys, stream_lines = water_mod.fetch_water_overpass(
-        polygon_wgs84,
-        lakes=bool(water.get("lakes")),
-        streams=bool(water.get("streams")),
-        named_streams_only=bool(water.get("named_only")),
-    )
+    sea_mask = None
+    if wants_sea:
+        dem_arr, sea_mask = mesh_mod.flatten_sea(
+            dem_arr,
+            water.get("sea_level_m", constants.SEA_LEVEL_MAX_M),
+            scale_xy,
+            z_scale,
+            water.get("recess_mm", constants.WATER_RECESS_MM),
+        )
+
+    if wants_fetch:
+        lake_polys, stream_lines = water_mod.fetch_water_overpass(
+            polygon_wgs84,
+            lakes=bool(water.get("lakes")),
+            streams=bool(water.get("streams")),
+            named_streams_only=bool(water.get("named_only")),
+        )
+    else:
+        lake_polys, stream_lines = [], []
     lakes_utm = water_mod.water_to_utm_clipped(lake_polys, epsg, poly_utm)
     streams_utm = water_mod.streams_to_utm_clipped(stream_lines, epsg, poly_utm)
 
@@ -97,6 +113,7 @@ def _apply_water(
         z_scale,
         water.get("recess_mm", constants.WATER_RECESS_MM),
     )
+    protect = lake_mask if sea_mask is None else (lake_mask | sea_mask)
     dem_arr, stream_mask = mesh_mod.carve_streams(
         dem_arr,
         transform,
@@ -105,11 +122,11 @@ def _apply_water(
         z_scale,
         water.get("stream_widths_mm", constants.STREAM_WIDTHS_MM),
         water.get("stream_depth_mm", constants.STREAM_DEPTH_MM),
-        protect_mask=lake_mask,
+        protect_mask=protect,
     )
-    # Streams join the water color class (F-27) — carving still protects
-    # only the lake planes.
-    return dem_arr, lake_mask | stream_mask, lakes_utm, streams_utm
+    # Sea, lakes, and carved streams all join the water color class; carving
+    # never cuts a flattened plane (sea or lake).
+    return dem_arr, protect | stream_mask, lakes_utm, streams_utm
 
 
 def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):
