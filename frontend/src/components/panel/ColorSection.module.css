@@ -28,15 +28,36 @@
   margin-bottom: var(--space-3);
 }
 
-.grid {
+.bandRow {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr auto;
   gap: var(--space-3);
+  align-items: end;
   margin-bottom: var(--space-3);
 }
 
-.grid:last-child {
-  margin-bottom: 0;
+.aboveLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  padding-bottom: var(--space-2);
+}
+
+.removeBtn {
+  width: auto;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.waterSlot {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  margin: var(--space-1) 0 0 0;
 }
 
 .fieldLabel {

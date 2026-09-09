@@ -45,6 +45,8 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 
 | F-31 | "Named streams only" filter: waterway fetch keeps only ways with a `name` tag | feature | C | DONE | 7862164 | Chosen over intermittent-filter after tag census of the Alberta box (94 ways: all `stream`, 0 intermittent-tagged, 22 named) — named ≈ appears-on-a-paper-topo. Filtered in the Overpass query itself; live-verified 94→22. Checkbox defaults ON. Strahler (F-29) remains the principled successor. |
 
+| F-32 | Dynamic color bands: replace fixed water/forest/rock/snow + treeline/snowline with a user-defined list of elevation bands (up to X m → #hex, add/remove rows, no semantic names); water stays a mask-driven color slot; base/walls take the lowest band's color; cutoffs in absolute metres | feature | C | WIP | | User-requested 2026-09-04; water-slot/base-rule/metres confirmed by user. Palette = exactly the entered colors; 3MF writer already generic. Band cap 16 (AMS headroom under the 32-color 3MF limit). |
+
 ## Dropped
 
 | ID | Item | Why |

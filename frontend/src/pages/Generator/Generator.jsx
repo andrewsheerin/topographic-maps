@@ -66,15 +66,11 @@ const DEFAULT_WATER = {
   streamDepth: '0.4',
 };
 
-// 3MF science fields are deliberately empty: treeline/snowline and the palette
-// vary by mountain range, so the user supplies them per print (F-23).
+// 3MF color fields are deliberately empty — bands and colors are the user's
+// per print, with no built-in classes (F-32). One unbounded band to start.
 const DEFAULT_COLOR_3MF = {
-  treeline: '',
-  snowline: '',
   water: '',
-  forest: '',
-  rock: '',
-  snow: '',
+  bands: [{ upto: '', color: '' }],
 };
 
 function downloadBlob(blob, filename) {
@@ -122,6 +118,33 @@ export default function Generator() {
 
   const updateColor3mf = useCallback((key, value) => {
     setColor3mf((c) => ({ ...c, [key]: value }));
+  }, []);
+
+  const updateColorBand = useCallback((i, field, value) => {
+    setColor3mf((c) => ({
+      ...c,
+      bands: c.bands.map((b, j) => (j === i ? { ...b, [field]: value } : b)),
+    }));
+  }, []);
+
+  // New bands slot in just below the "Above" row.
+  const addColorBand = useCallback(() => {
+    setColor3mf((c) => ({
+      ...c,
+      bands: [
+        ...c.bands.slice(0, -1),
+        { upto: '', color: '' },
+        c.bands[c.bands.length - 1],
+      ],
+    }));
+  }, []);
+
+  const removeColorBand = useCallback((i) => {
+    setColor3mf((c) =>
+      c.bands.length <= 1
+        ? c
+        : { ...c, bands: c.bands.filter((_, j) => j !== i) },
+    );
   }, []);
 
   const updateRoad = useCallback((key, field, value) => {
@@ -199,16 +222,14 @@ export default function Generator() {
         stream_depth_mm: Number(water.streamDepth || 0),
       },
       color:
-        features.color && colorComplete(color3mf)
+        features.color && colorComplete(color3mf, features.water)
           ? {
-              treeline_m: Number(color3mf.treeline),
-              snowline_m: Number(color3mf.snowline),
-              colors: {
-                water: color3mf.water,
-                forest: color3mf.forest,
-                rock: color3mf.rock,
-                snow: color3mf.snow,
-              },
+              water_color: features.water ? color3mf.water : null,
+              bands: color3mf.bands.map((b, i) => ({
+                upto_m:
+                  i === color3mf.bands.length - 1 ? null : Number(b.upto),
+                color: b.color,
+              })),
             }
           : null,
     };
@@ -418,16 +439,24 @@ export default function Generator() {
         <ColorSection
           enabled={features.color}
           onToggle={(v) => toggleFeature('color', v)}
+          waterOn={features.water}
           color={color3mf}
           onChange={updateColor3mf}
+          onBandChange={updateColorBand}
+          onAddBand={addColorBand}
+          onRemoveBand={removeColorBand}
         />
 
         <OutputSection
           onGenerateStl={handleGenerateStl}
           onGenerate3mf={handleGenerate3mf}
           onGenerateBundle={handleGenerateBundle}
-          threemfDisabled={!(features.color && colorComplete(color3mf))}
-          zipDisabled={features.color && !colorComplete(color3mf)}
+          threemfDisabled={
+            !(features.color && colorComplete(color3mf, features.water))
+          }
+          zipDisabled={
+            features.color && !colorComplete(color3mf, features.water)
+          }
           status={status}
         />
       </aside>

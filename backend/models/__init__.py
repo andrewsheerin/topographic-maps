@@ -1,6 +1,6 @@
 from .schemas import (
     ColorBands,
-    ColorParams,
+    ElevationBand,
     Generate3MFRequest,
     GenerateRequest,
     RoadEtch,
@@ -11,7 +11,7 @@ from .schemas import (
 
 __all__ = [
     "ColorBands",
-    "ColorParams",
+    "ElevationBand",
     "Generate3MFRequest",
     "GenerateRequest",
     "RoadEtch",

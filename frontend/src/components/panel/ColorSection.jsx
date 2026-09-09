@@ -1,23 +1,35 @@
+import Button from '../ui/Button.jsx';
 import styles from './ColorSection.module.css';
-
-export const COLOR_FIELDS = [
-  { key: 'water', label: 'Water' },
-  { key: 'forest', label: 'Forest' },
-  { key: 'rock', label: 'Rock' },
-  { key: 'snow', label: 'Snow' },
-];
 
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
 
-// Every science field is required — treeline/snowline and the palette vary by
-// mountain range and have no defaults.
-export function colorComplete(c) {
-  if (c.treeline === '' || !Number.isFinite(Number(c.treeline))) return false;
-  if (c.snowline === '' || !Number.isFinite(Number(c.snowline))) return false;
-  return COLOR_FIELDS.every((f) => HEX_RE.test(c[f.key]));
+export const MAX_BANDS = 16;
+
+// Every field is required — cutoffs and colors are the user's per print
+// (F-32: no built-in classes, no defaults). `waterOn` adds the mask-driven
+// water slot to the requirement.
+export function colorComplete(c, waterOn) {
+  if (waterOn && !HEX_RE.test(c.water)) return false;
+  if (c.bands.length < 1) return false;
+  return c.bands.every((b, i) => {
+    if (!HEX_RE.test(b.color)) return false;
+    const isLast = i === c.bands.length - 1;
+    return isLast || (b.upto !== '' && Number.isFinite(Number(b.upto)));
+  });
 }
 
-export default function ColorSection({ enabled, onToggle, color, onChange }) {
+export default function ColorSection({
+  enabled,
+  onToggle,
+  waterOn,
+  color,
+  onChange,
+  onBandChange,
+  onAddBand,
+  onRemoveBand,
+}) {
+  const lastIdx = color.bands.length - 1;
+
   return (
     <section>
       <h2>5. Color</h2>
@@ -35,49 +47,71 @@ export default function ColorSection({ enabled, onToggle, color, onChange }) {
       {enabled && (
         <div className={styles.box}>
           <div className={styles.title}>
-            Per-face color by elevation band, for AMS multi-color printing —
-            exported in the 3MF
+            Elevation bands, low to high — each face gets its band&apos;s
+            color in the 3MF. Bands sort by elevation automatically; the base
+            and walls use the lowest band.
           </div>
 
-          <div className={styles.grid}>
-            <label className={styles.fieldLabel} htmlFor="treelineM">
-              Treeline (m)
-              <input
-                id="treelineM"
-                type="number"
-                value={color.treeline}
-                onChange={(e) => onChange('treeline', e.target.value)}
-              />
-            </label>
-            <label className={styles.fieldLabel} htmlFor="snowlineM">
-              Snowline (m)
-              <input
-                id="snowlineM"
-                type="number"
-                value={color.snowline}
-                onChange={(e) => onChange('snowline', e.target.value)}
-              />
-            </label>
-          </div>
-
-          <div className={styles.grid}>
-            {COLOR_FIELDS.map((f) => (
-              <label
-                className={styles.fieldLabel}
-                key={f.key}
-                htmlFor={`color-${f.key}`}
-              >
-                {f.label}
+          {color.bands.map((b, i) => (
+            <div className={styles.bandRow} key={i}>
+              {i === lastIdx ? (
+                <span className={styles.aboveLabel}>Above</span>
+              ) : (
+                <label className={styles.fieldLabel} htmlFor={`bandUpto-${i}`}>
+                  Up to (m)
+                  <input
+                    id={`bandUpto-${i}`}
+                    type="number"
+                    value={b.upto}
+                    onChange={(e) => onBandChange(i, 'upto', e.target.value)}
+                  />
+                </label>
+              )}
+              <label className={styles.fieldLabel} htmlFor={`bandColor-${i}`}>
+                Color
                 <input
-                  id={`color-${f.key}`}
+                  id={`bandColor-${i}`}
                   type="text"
                   placeholder="#RRGGBB"
-                  value={color[f.key]}
-                  onChange={(e) => onChange(f.key, e.target.value)}
+                  value={b.color}
+                  onChange={(e) => onBandChange(i, 'color', e.target.value)}
                 />
               </label>
-            ))}
-          </div>
+              <Button
+                className={styles.removeBtn}
+                onClick={() => onRemoveBand(i)}
+                disabled={color.bands.length <= 1}
+                aria-label={`Remove band ${i + 1}`}
+              >
+                ✕
+              </Button>
+            </div>
+          ))}
+
+          <Button
+            onClick={onAddBand}
+            disabled={color.bands.length >= MAX_BANDS}
+          >
+            Add band
+          </Button>
+
+          {waterOn && (
+            <div className={styles.waterSlot}>
+              <label className={styles.fieldLabel} htmlFor="waterColor">
+                Lakes &amp; streams
+                <input
+                  id="waterColor"
+                  type="text"
+                  placeholder="#RRGGBB"
+                  value={color.water}
+                  onChange={(e) => onChange('water', e.target.value)}
+                />
+              </label>
+              <p className={styles.hint}>
+                Painted on the fetched water shapes, whatever their elevation.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </section>

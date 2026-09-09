@@ -52,24 +52,25 @@ class RoadEtchParams(BaseModel):
 _HEX = r"^#[0-9A-Fa-f]{6}$"
 
 
-class ColorParams(BaseModel):
-    """The 3MF palette in class order (F-23). All required — no default
-    colors are chosen here."""
+class ElevationBand(BaseModel):
+    """One color band (F-32): applies to cells with mean elevation below
+    `upto_m` (strict, as treeline/snowline behaved); the highest band omits
+    upto_m and takes everything above. No semantic name — the color is the
+    whole definition."""
 
-    water: str = Field(pattern=_HEX)
-    forest: str = Field(pattern=_HEX)
-    rock: str = Field(pattern=_HEX)
-    snow: str = Field(pattern=_HEX)
+    upto_m: float | None = None
+    color: str = Field(pattern=_HEX)
 
 
 class ColorBands(BaseModel):
-    """Color-band parameters for the 3MF (F-23/F-25). treeline_m and
-    snowline_m are scientific per-request values (they vary by mountain
-    range) — required, no defaults (science-integrity)."""
+    """Dynamic 3MF palette (F-32): user-defined elevation bands with no
+    baked-in classes. Cutoffs are absolute metres and belong to the user
+    (science-integrity) — no defaults. water_color paints the fetched
+    lake/stream masks; None when water is disabled. Band cap 16 keeps AMS
+    headroom under 3MF's 32-color limit."""
 
-    treeline_m: float
-    snowline_m: float
-    colors: ColorParams
+    water_color: str | None = Field(default=None, pattern=_HEX)
+    bands: list[ElevationBand] = Field(min_length=1, max_length=16)
 
 
 class GenerateRequest(BaseModel):

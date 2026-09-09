@@ -272,18 +272,22 @@ def cell_ok_mask(dem):
     return _remove_pinch_cells(cell_ok)
 
 
-def classify_terrain_cells(dem, water_mask, treeline_m, snowline_m):
-    """Per-cell color class for the 3MF export (F-23), priority order:
-      0 water  — any corner pixel inside a lake polygon (elevation-independent)
-      1 forest — else, cell mean elevation below treeline_m
-      2 rock   — else, below snowline_m
-      3 snow   — else
-    treeline_m and snowline_m are per-request user values (science-integrity:
-    they vary by mountain range and are never defaulted here)."""
+def classify_terrain_cells(dem, water_mask, cutoffs_m, band_offset=0):
+    """Per-cell palette index for the 3MF export (F-32: dynamic bands).
+
+    `cutoffs_m` is the ascending list of band upper bounds in metres —
+    n_bands - 1 entries, the highest band is unbounded. A cell's 4-corner
+    mean elevation picks the first band whose cutoff exceeds it (strict `<`,
+    exactly as the old treeline/snowline behaved). Band i maps to palette
+    index band_offset + i. Water wins first: cells with any corner pixel in
+    `water_mask` override to palette index 0 (the mask-driven water slot) —
+    pass water_mask=None when the palette has no water slot. The cutoffs are
+    per-request user values (science-integrity: never defaulted here)."""
     mean_m = (dem[:-1, :-1] + dem[:-1, 1:] + dem[1:, :-1] + dem[1:, 1:]) / 4.0
-    cls = np.full(mean_m.shape, 3, dtype=np.int16)
-    cls[mean_m < float(snowline_m)] = 2
-    cls[mean_m < float(treeline_m)] = 1
+    idx = np.searchsorted(
+        np.asarray(cutoffs_m, dtype=np.float64), mean_m, side="right"
+    )
+    cls = (idx + int(band_offset)).astype(np.int16)
     if water_mask is not None:
         water_cell = (
             water_mask[:-1, :-1]

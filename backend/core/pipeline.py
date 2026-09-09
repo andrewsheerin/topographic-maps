@@ -113,21 +113,40 @@ def _apply_water(
 
 
 def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):
-    """Write the colored 3MF for a sealed solid (F-23). `color` is the
-    ColorBands dict: treeline_m, snowline_m, colors{water,forest,rock,snow}."""
+    """Write the colored 3MF for a sealed solid (F-32: dynamic bands).
+
+    `color` is the ColorBands dict: water_color (or None) + bands, each
+    {upto_m, color}. Bands sort by cutoff (only the highest may omit it);
+    the palette is [water_color?] + band colors, and base/walls take the
+    lowest band's color."""
+    bands = sorted(
+        color["bands"],
+        key=lambda b: (b["upto_m"] is None, b["upto_m"] or 0.0),
+    )
+    cutoffs_m = [b["upto_m"] for b in bands[:-1]]
+    if any(c is None for c in cutoffs_m):
+        raise RuntimeError(
+            "Only the highest color band may leave its 'up to' elevation empty."
+        )
+
+    water_color = color.get("water_color")
+    band_offset = 1 if water_color else 0
+    palette = ([water_color] if water_color else []) + [b["color"] for b in bands]
+
     cell_cls = mesh_mod.classify_terrain_cells(
-        dem_arr, water_mask, color["treeline_m"], color["snowline_m"]
+        dem_arr,
+        water_mask if water_color else None,
+        cutoffs_m,
+        band_offset=band_offset,
     )
     face_cls = mesh_mod.face_classes_for_solid(dem_arr, cell_cls, len(solid.faces))
-    c = color["colors"]
     threemf_mod.write_3mf(
         out_path,
         solid.vertices,
         solid.faces,
         face_cls,
-        # Palette in class order: 0 water, 1 forest, 2 rock, 3 snow.
-        [c["water"], c["forest"], c["rock"], c["snow"]],
-        default_index=2,  # base/walls print in the rock color
+        palette,
+        default_index=band_offset,  # base/walls print in the lowest band
     )
     return out_path
 
