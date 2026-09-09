@@ -33,17 +33,12 @@ RELS_XML = """<?xml version="1.0" encoding="UTF-8"?>
 HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
-def write_3mf(
-    path, vertices_mm, faces, face_classes, colors_hex, default_index,
-    extra_meshes=(),
-):
+def write_3mf(path, vertices_mm, faces, face_classes, colors_hex, default_index):
     """Write a colored 3MF: mesh in millimetres, one color per face.
 
     face_classes: int per face — an index into colors_hex, or -1 to use the
-    object default (default_index). extra_meshes: (vertices_mm, faces) pairs
-    written as additional uncolored objects (F-35: the frame) — the slicer
-    assigns their filament. Fails loudly on malformed input rather than
-    emitting a file a slicer will misread."""
+    object default (default_index). Fails loudly on malformed input rather
+    than emitting a file a slicer will misread."""
     colors_hex = list(colors_hex)
     if not colors_hex:
         raise ValueError("3MF export needs at least one palette color.")
@@ -90,29 +85,10 @@ def write_3mf(
         else:
             raise ValueError(f"Face class {cls} is outside the palette.")
 
-    parts.append("    </triangles>\n   </mesh>\n  </object>\n")
-
-    for k, (xverts, xfaces) in enumerate(extra_meshes):
-        parts.append(
-            f'  <object id="{3 + k}" type="model">\n   <mesh>\n    <vertices>\n'
-        )
-        parts.extend(
-            f'     <vertex x="{x:.6g}" y="{y:.6g}" z="{z:.6g}"/>\n'
-            for x, y, z in xverts
-        )
-        parts.append("    </vertices>\n    <triangles>\n")
-        parts.extend(
-            f'     <triangle v1="{v1}" v2="{v2}" v3="{v3}"/>\n'
-            for v1, v2, v3 in xfaces
-        )
-        parts.append("    </triangles>\n   </mesh>\n  </object>\n")
-
-    parts.append(" </resources>\n <build>\n")
-    parts.append('  <item objectid="2"/>\n')
-    parts.extend(
-        f'  <item objectid="{3 + k}"/>\n' for k in range(len(extra_meshes))
+    parts.append(
+        "    </triangles>\n   </mesh>\n  </object>\n </resources>\n"
+        ' <build>\n  <item objectid="2"/>\n </build>\n</model>\n'
     )
-    parts.append(" </build>\n</model>\n")
 
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("[Content_Types].xml", CONTENT_TYPES_XML)

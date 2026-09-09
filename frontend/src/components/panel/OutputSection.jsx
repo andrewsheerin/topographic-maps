@@ -7,8 +7,8 @@ export default function OutputSection({
   onGenerateBundle,
   threemfDisabled,
   zipDisabled,
-  frame,
-  onFrameChange,
+  cleanEdges,
+  onCleanEdgesChange,
   status,
 }) {
   return (
@@ -20,27 +20,14 @@ export default function OutputSection({
           <input
             type="checkbox"
             className={styles.checkbox}
-            checked={frame.enabled}
-            onChange={(e) => onFrameChange('enabled', e.target.checked)}
+            checked={cleanEdges}
+            onChange={(e) => onCleanEdgesChange(e.target.checked)}
           />
-          <span>Add frame (3MF) — clean 90° outer edges</span>
+          <span>
+            Straight edges — clip to the largest clean rectangle (trims the
+            skewed margin)
+          </span>
         </label>
-        {frame.enabled && (
-          <>
-            <label className={styles.frameLabel} htmlFor="frameWidth">
-              Width (mm)
-            </label>
-            <input
-              id="frameWidth"
-              className={styles.frameNum}
-              type="number"
-              step="0.5"
-              min="0.5"
-              value={frame.width}
-              onChange={(e) => onFrameChange('width', e.target.value)}
-            />
-          </>
-        )}
       </div>
 
       <div className={styles.row}>

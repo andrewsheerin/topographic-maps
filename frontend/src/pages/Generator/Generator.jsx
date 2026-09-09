@@ -100,8 +100,8 @@ export default function Generator() {
   const [roads, setRoads] = useState(DEFAULT_ROADS);
   const [water, setWater] = useState(DEFAULT_WATER);
   const [color3mf, setColor3mf] = useState(DEFAULT_COLOR_3MF);
-  // F-35: clean-edge frame solid in the 3MF; 5 mm default width (user pick).
-  const [frame, setFrame] = useState({ enabled: false, width: '5' });
+  // F-35: clip the terrain to the largest clean rectangle before meshing.
+  const [cleanEdges, setCleanEdges] = useState(false);
   // Opt-in feature toggles (F-25): off means no inputs shown and, above all,
   // no Overpass fetch for that feature.
   const [features, setFeatures] = useState({
@@ -125,10 +125,6 @@ export default function Generator() {
 
   const updateColor3mf = useCallback((key, value) => {
     setColor3mf((c) => ({ ...c, [key]: value }));
-  }, []);
-
-  const updateFrame = useCallback((key, value) => {
-    setFrame((f) => ({ ...f, [key]: value }));
   }, []);
 
   const updateColorBand = useCallback((i, field, value) => {
@@ -275,8 +271,7 @@ export default function Generator() {
         },
         stream_depth_mm: Number(water.streamDepth || 0),
       },
-      frame_width_mm:
-        frame.enabled && Number(frame.width) > 0 ? Number(frame.width) : null,
+      clean_edges: cleanEdges,
       color:
         features.color && colorComplete(color3mf)
           ? {
@@ -289,7 +284,7 @@ export default function Generator() {
             }
           : null,
     };
-  }, [terrain, roads, selectedRoadLevels, water, features, color3mf, widthFloorMm]);
+  }, [terrain, roads, selectedRoadLevels, water, features, color3mf, widthFloorMm, cleanEdges]);
 
   /* ---------------- polygon ---------------- */
 
@@ -517,8 +512,8 @@ export default function Generator() {
           zipDisabled={
             features.color && !colorComplete(color3mf)
           }
-          frame={frame}
-          onFrameChange={updateFrame}
+          cleanEdges={cleanEdges}
+          onCleanEdgesChange={setCleanEdges}
           status={status}
         />
       </aside>

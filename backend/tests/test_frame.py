@@ -1,21 +1,13 @@
-"""Tests for the 3MF frame (F-35): the inscribed-rectangle search, the ring
-solid's watertightness, and the multi-object 3MF round-trip."""
-
-import zipfile
-from xml.etree import ElementTree
+"""Tests for the clean-edge clip (F-35): the inscribed-rectangle search and
+the pre-mesh DEM clip that gives rectangular prints straight 90° edges
+instead of the stair-stepped UTM-reprojection margin."""
 
 import numpy as np
 import pytest
 from rasterio.transform import from_origin
 
-from core.mesh import (
-    add_base,
-    dem_to_mesh,
-    frame_solid,
-    largest_true_rect,
-)
-from core.pipeline import _build_frame
-from core.threemf import CORE_NS, write_3mf
+from core.mesh import add_base, dem_to_mesh, largest_true_rect
+from core.pipeline import _clip_clean_rect
 
 PX_M = 30.0
 SCALE_XY = 0.0001
@@ -24,7 +16,7 @@ Z_SCALE = 1.0
 
 def test_largest_true_rect_on_skewed_footprint():
     # A rotated-rectangle footprint like a reprojected drawn box: build a
-    # parallelogram mask and check the found rect is all-True and non-trivial.
+    # sheared band and check the found rect is all-True and substantial.
     h, w = 40, 60
     mask = np.zeros((h, w), dtype=bool)
     for r in range(h):
@@ -48,20 +40,6 @@ def test_largest_true_rect_raises_on_empty():
         largest_true_rect(np.zeros((5, 5), dtype=bool))
 
 
-def test_frame_solid_watertight_with_exact_volume():
-    solid = frame_solid((10, 10, 90, 80), (0, 0, 100, 100), -2.0, 15.0)
-    assert solid.is_watertight
-    assert solid.is_winding_consistent
-    assert solid.euler_number == 0  # ring topology (genus 1)
-    expected = (100 * 100 - 80 * 70) * 17.0
-    assert solid.volume == pytest.approx(expected, rel=1e-9)
-
-
-def test_frame_solid_rejects_non_nested_rects():
-    with pytest.raises(ValueError, match="inside"):
-        frame_solid((0, 0, 100, 100), (10, 10, 90, 90), 0.0, 5.0)
-
-
 def _skewed_dem():
     h, w = 30, 30
     dem = np.full((h, w), np.nan, dtype=np.float32)
@@ -71,46 +49,45 @@ def _skewed_dem():
     return dem
 
 
-def test_build_frame_covers_ragged_margin_and_spans_terrain_height():
+def test_clip_clean_rect_yields_fully_finite_rectangle():
     dem = _skewed_dem()
-    solid = add_base(dem_to_mesh(dem, PX_M, SCALE_XY, Z_SCALE), 2.0)
-    frame = _build_frame(dem, PX_M, SCALE_XY, solid, frame_width_mm=5.0)
+    transform = from_origin(0.0, 30 * PX_M, PX_M, PX_M)
+    dem2, t2 = _clip_clean_rect(dem, transform)
 
-    assert frame.is_watertight
-    # Full vertical span: base bottom to terrain peak.
-    assert frame.vertices[:, 2].min() == pytest.approx(
-        solid.vertices[:, 2].min()
-    )
-    assert frame.vertices[:, 2].max() == pytest.approx(
-        solid.vertices[:, 2].max()
-    )
-    # Outer rect = terrain bbox + width on every side.
+    # The clipped DEM is a solid rectangle: every vertex finite.
+    assert np.isfinite(dem2).all()
+    assert dem2.shape[0] >= 2 and dem2.shape[1] >= 2
+    # The transform shifted by the clip offset (origin moved east/south).
+    assert t2.c >= transform.c and t2.f <= transform.f
+    assert t2.a == transform.a and t2.e == transform.e
+
+
+def test_clipped_mesh_has_straight_edges_and_seals():
+    dem = _skewed_dem()
+    transform = from_origin(0.0, 30 * PX_M, PX_M, PX_M)
+    dem2, _ = _clip_clean_rect(dem, transform)
+
+    solid = add_base(dem_to_mesh(dem2, PX_M, SCALE_XY, Z_SCALE), 2.0)
+    assert solid.is_watertight
+    assert solid.is_winding_consistent
+
+    # Straight edges: every boundary vertex lies exactly on the bbox — the
+    # XY outline is a perfect rectangle (no stair-steps).
+    h2, w2 = dem2.shape
     cell = PX_M * SCALE_XY * 1000.0
-    assert frame.vertices[:, 0].min() == pytest.approx(-5.0)
-    assert frame.vertices[:, 0].max() == pytest.approx((30 - 1) * cell + 5.0)
-    # Inner rect sits strictly inside the terrain bbox (covers the wedges).
-    inner_x = sorted(set(np.round(frame.vertices[:, 0], 6)))[1:-1]
-    assert min(inner_x) > 0.0
+    x, y = solid.vertices[:, 0], solid.vertices[:, 1]
+    assert x.min() == pytest.approx(0.0)
+    assert x.max() == pytest.approx((w2 - 1) * cell)
+    assert y.min() == pytest.approx(0.0)
+    assert y.max() == pytest.approx((h2 - 1) * cell)
+    # Full-grid mesh: no cell was dropped, so vertex count is exactly the
+    # grid twice (top + bottom) — the signature of a clean rectangle.
+    assert len(solid.vertices) == 2 * h2 * w2
 
 
-def test_3mf_gains_second_uncolored_object(tmp_path):
+def test_unclipped_skewed_mesh_is_ragged_by_contrast():
+    # Sanity check of the premise: without the clip, the same DEM meshes to a
+    # cropped, stair-stepped outline (fewer vertices than the full grid).
     dem = _skewed_dem()
-    solid = add_base(dem_to_mesh(dem, PX_M, SCALE_XY, Z_SCALE), 2.0)
-    frame = _build_frame(dem, PX_M, SCALE_XY, solid, frame_width_mm=5.0)
-
-    out = str(tmp_path / "framed.3mf")
-    face_cls = np.zeros(len(solid.faces), dtype=int)
-    write_3mf(
-        out, solid.vertices, solid.faces, face_cls, ["#123456"], 0,
-        extra_meshes=[(frame.vertices, frame.faces)],
-    )
-
-    with zipfile.ZipFile(out) as z:
-        root = ElementTree.fromstring(z.read("3D/3dmodel.model"))
-    objects = root.findall(f".//{{{CORE_NS}}}object")
-    assert [o.get("id") for o in objects] == ["2", "3"]
-    assert objects[1].get("pid") is None  # frame carries no color
-    frame_tris = objects[1].findall(f".//{{{CORE_NS}}}triangle")
-    assert len(frame_tris) == len(frame.faces) == 32
-    items = root.findall(f".//{{{CORE_NS}}}item")
-    assert [i.get("objectid") for i in items] == ["2", "3"]
+    surface = dem_to_mesh(dem, PX_M, SCALE_XY, Z_SCALE)
+    assert len(surface.vertices) < 30 * 30

@@ -400,9 +400,10 @@ def dem_to_mesh(dem, px_m, scale_xy, z_scale):
 
 def largest_true_rect(mask):
     """Inclusive (r0, r1, c0, c1) bounds of the largest all-True axis-aligned
-    rectangle in a 2D bool mask (F-35: the frame's inner edge must lie fully
-    inside the terrain footprint so the reprojection skew wedges are covered
-    gap-free). Histogram-of-heights with a monotonic stack, O(h·w)."""
+    rectangle in a 2D bool mask (F-35: the clean-edge clip trims the terrain
+    to the largest rectangle fully inside its footprint, cutting off the
+    stair-stepped reprojection margin). Histogram-of-heights with a monotonic
+    stack, O(h·w)."""
     h, w = mask.shape
     heights = np.zeros(w, dtype=np.int64)
     best_area = 0
@@ -424,48 +425,9 @@ def largest_true_rect(mask):
     if best is None:
         raise RuntimeError(
             "No solid rectangle fits inside the terrain footprint — "
-            "the area is too small or fragmented for a frame."
+            "the area is too small or fragmented for the clean-edge clip."
         )
     return best
-
-
-def frame_solid(inner, outer, z0, z1):
-    """Watertight rectangular ring (F-35): a box with a box-shaped hole.
-    `inner` and `outer` are (x0, y0, x1, y1) in print mm; the ring spans
-    z0..z1. 16 vertices, 32 triangles, genus 1."""
-    ix0, iy0, ix1, iy1 = (float(v) for v in inner)
-    ox0, oy0, ox1, oy1 = (float(v) for v in outer)
-    if not (ox0 < ix0 < ix1 < ox1 and oy0 < iy0 < iy1 < oy1):
-        raise ValueError("Frame inner rectangle must sit strictly inside outer.")
-
-    def ring(z):
-        return [
-            (ox0, oy0, z), (ox1, oy0, z), (ox1, oy1, z), (ox0, oy1, z),
-            (ix0, iy0, z), (ix1, iy0, z), (ix1, iy1, z), (ix0, iy1, z),
-        ]
-
-    # Both rings run counterclockwise seen from +z; windings below are
-    # outward by construction (no scipy-backed fix_normals available).
-    vertices = np.array(ring(float(z0)) + ring(float(z1)), dtype=np.float64)
-    faces = []
-    for s in range(4):
-        o0, o1 = s, (s + 1) % 4  # bottom outer corners of this side
-        i0, i1 = 4 + s, 4 + (s + 1) % 4  # bottom inner
-        O0, O1, I0, I1 = o0 + 8, o1 + 8, i0 + 8, i1 + 8  # top copies
-        faces += [
-            [o0, i1, o1], [o0, i0, i1],  # bottom annulus, facing -z
-            [O0, O1, I1], [O0, I1, I0],  # top annulus, facing +z
-            [o0, o1, O1], [o0, O1, O0],  # outer wall, facing out
-            [i0, I1, i1], [i0, I0, I1],  # inner wall, facing the hole
-        ]
-
-    solid = trimesh.Trimesh(vertices=vertices, faces=np.array(faces), process=False)
-    expected = ((ox1 - ox0) * (oy1 - oy0) - (ix1 - ix0) * (iy1 - iy0)) * (
-        float(z1) - float(z0)
-    )
-    if not solid.is_watertight or abs(solid.volume - expected) > 1e-6 * expected:
-        raise RuntimeError("Frame solid failed its watertightness check.")
-    return solid
 
 
 def add_base(surface, thickness_mm):
