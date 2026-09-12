@@ -55,6 +55,8 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 
 | F-36 | Clip dimensions: with Straight edges on, choose square or W×H rectangle + exact side lengths (mm); aspect-constrained inscribed-rect search, centered on the drawn area; dimensions govern print scale (Target max size ignored) | feature | C | DONE | 4a24efd | User-requested 2026-09-04 (wooden-frame mountain print). Square is cell-exact; custom W:H matches to ≤1 cell (~0.4 mm) — terrain is never stretched (aspect-preservation rule). Clip centers on the drawn-area centroid. |
 
+| F-37 | Target-size prints came out (n−1)/n short (100 mm → 99.65 mm): scale divided by raster pixel count, mesh spans pixel-center intervals | bug | C | DONE | 7904da2 | Found via user's Killington print (99.6503 × 99.3007 for a 100 target — exact signature). F-36 dims path already correct. Regression test asserts the long side hits the target exactly. |
+
 ## Dropped
 
 | ID | Item | Why |
