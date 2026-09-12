@@ -53,7 +53,7 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 
 | F-35 | Clean edges: "Straight edges" checkbox clips the terrain to the largest axis-aligned rectangle inscribed in its footprint before meshing — straight 90° edges instead of the stair-stepped UTM-reprojection margin | feature | C | DONE | a3031b2, e8f42ed, e04f222 | User-proposed 2026-09-04; first built as a separate frame solid (a3031b2), reworked same-day on user clarification: the frame was a cookie cutter, not a printed part. Clip applies to STL/3MF/ZIP; scale computed post-clip so target size = printed size. Trims the skew-wedge sliver of the drawn area. Frame-object code removed. |
 
-| F-36 | Clip dimensions: with Straight edges on, choose square or W×H rectangle + exact side lengths (mm); aspect-constrained inscribed-rect search, centered on the drawn area; dimensions govern print scale (Target max size ignored) | feature | C | WIP | | User-requested 2026-09-04 (wooden-frame mountain print). Square is cell-exact; custom W:H matches to ≤1 cell (~0.4 mm) — terrain is never stretched (aspect-preservation rule). |
+| F-36 | Clip dimensions: with Straight edges on, choose square or W×H rectangle + exact side lengths (mm); aspect-constrained inscribed-rect search, centered on the drawn area; dimensions govern print scale (Target max size ignored) | feature | C | DONE | 4a24efd | User-requested 2026-09-04 (wooden-frame mountain print). Square is cell-exact; custom W:H matches to ≤1 cell (~0.4 mm) — terrain is never stretched (aspect-preservation rule). Clip centers on the drawn-area centroid. |
 
 ## Dropped
 
