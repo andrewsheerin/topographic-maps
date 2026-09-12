@@ -97,6 +97,11 @@ class GenerateRequest(BaseModel):
     # footprint before meshing — straight 90° edges instead of the
     # stair-stepped reprojection margin. Trims the skew-wedge sliver.
     clean_edges: bool = False
+    # F-36: exact print dimensions for the clip (both or neither; equal =
+    # square). When set, these govern the scale and Target max size is
+    # ignored. Requires clean_edges.
+    clip_width_mm: float | None = Field(default=None, gt=0)
+    clip_height_mm: float | None = Field(default=None, gt=0)
 
 
 class Generate3MFRequest(GenerateRequest):

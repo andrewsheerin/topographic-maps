@@ -430,6 +430,61 @@ def largest_true_rect(mask):
     return best
 
 
+def largest_true_rect_with_aspect(mask, aspect_wh):
+    """Inclusive (r0, r1, c0, c1) bounds of the largest rectangle of the
+    given width:height ratio that fits entirely in a 2D bool mask (F-36).
+    Cells are square in UTM, so a cell-aspect of 1.0 is an exactly square
+    print. Among all positions of the maximal size, the one closest to the
+    footprint centroid wins (clip stays centered on the drawn area).
+
+    Binary search on height; each candidate size is checked everywhere at
+    once with a summed-area table."""
+    h, w = mask.shape
+    counts = np.zeros((h + 1, w + 1), dtype=np.int64)
+    np.cumsum(np.cumsum(mask, axis=0), axis=1, out=counts[1:, 1:])
+
+    def positions(hc, wc):
+        """Bool array of top-left corners where an (hc, wc) rect is all-True,
+        via the integral-image window sum."""
+        if hc > h or wc > w:
+            return None
+        window = (
+            counts[hc : h + 1, wc : w + 1]
+            - counts[0 : h - hc + 1, wc : w + 1]
+            - counts[hc : h + 1, 0 : w - wc + 1]
+            + counts[0 : h - hc + 1, 0 : w - wc + 1]
+        )
+        hit = window == hc * wc
+        return hit if hit.any() else None
+
+    def size_for(hc):
+        return hc, max(1, int(round(hc * aspect_wh)))
+
+    lo, hi, best_hc = 0, h, 0
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if positions(*size_for(mid)) is not None:
+            best_hc = mid
+            lo = mid
+        else:
+            hi = mid - 1
+    if best_hc == 0:
+        raise RuntimeError(
+            "No rectangle of the requested shape fits inside the terrain "
+            "footprint — the area is too small or fragmented for this clip."
+        )
+
+    hc, wc = size_for(best_hc)
+    hits = positions(hc, wc)
+    rows, cols = np.nonzero(hits)
+    true_r, true_c = np.nonzero(mask)
+    cr, cc = true_r.mean(), true_c.mean()  # footprint centroid
+    d2 = (rows + hc / 2 - cr) ** 2 + (cols + wc / 2 - cc) ** 2
+    k = int(np.argmin(d2))
+    r0, c0 = int(rows[k]), int(cols[k])
+    return r0, r0 + hc - 1, c0, c0 + wc - 1
+
+
 def add_base(surface, thickness_mm):
     """Seal an open heightmap surface into a watertight solid (F-16): an
     inverted copy of the surface `thickness_mm` below its lowest point forms the

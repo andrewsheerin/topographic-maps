@@ -6,7 +6,12 @@ import numpy as np
 import pytest
 from rasterio.transform import from_origin
 
-from core.mesh import add_base, dem_to_mesh, largest_true_rect
+from core.mesh import (
+    add_base,
+    dem_to_mesh,
+    largest_true_rect,
+    largest_true_rect_with_aspect as mesh_largest_aspect,
+)
 from core.pipeline import _clip_clean_rect
 
 PX_M = 30.0
@@ -83,6 +88,76 @@ def test_clipped_mesh_has_straight_edges_and_seals():
     # Full-grid mesh: no cell was dropped, so vertex count is exactly the
     # grid twice (top + bottom) — the signature of a clean rectangle.
     assert len(solid.vertices) == 2 * h2 * w2
+
+
+def test_aspect_rect_square_on_shear_is_exactly_square():
+    h, w = 40, 60
+    mask = np.zeros((h, w), dtype=bool)
+    for r in range(h):
+        shift = r // 4
+        mask[r, shift : shift + 40] = True
+
+    r0, r1, c0, c1 = mesh_largest_aspect(mask, 1.0)
+    assert (r1 - r0) == (c1 - c0)  # square in cells = square in mm
+    assert mask[r0 : r1 + 1, c0 : c1 + 1].all()
+    # Centered: the square's center tracks the footprint centroid.
+    tr, tc = np.nonzero(mask)
+    assert abs((r0 + r1) / 2 - tr.mean()) < 6
+    assert abs((c0 + c1) / 2 - tc.mean()) < 6
+
+
+def test_aspect_rect_exact_on_full_mask():
+    mask = np.ones((10, 20), dtype=bool)
+    # Square: limited by height.
+    r0, r1, c0, c1 = mesh_largest_aspect(mask, 1.0)
+    assert (r1 - r0 + 1, c1 - c0 + 1) == (10, 10)
+    # 2:1 (w:h) fits the whole mask.
+    r0, r1, c0, c1 = mesh_largest_aspect(mask, 2.0)
+    assert (r1 - r0 + 1, c1 - c0 + 1) == (10, 20)
+
+
+def test_aspect_rect_raises_when_nothing_fits():
+    with pytest.raises(RuntimeError, match="requested shape"):
+        mesh_largest_aspect(np.zeros((5, 5), dtype=bool), 1.0)
+
+
+def test_clip_and_scale_dims_govern_exact_print_size():
+    # Square clip at 150 mm: the printed X extent must be exactly 150 mm and
+    # Y must equal X (cells are square).
+    from core.mesh import dem_to_mesh as mesh_fn
+    from core.pipeline import _clip_and_scale
+
+    dem = _skewed_dem()
+    transform = from_origin(0.0, 30 * PX_M, PX_M, PX_M)
+    dem2, t2, scale_xy = _clip_and_scale(
+        dem, transform, PX_M, target_max_mm=999.0, clean_edges=True,
+        clip_width_mm=150.0, clip_height_mm=150.0,
+    )
+    assert np.isfinite(dem2).all()
+    h2, w2 = dem2.shape
+    assert h2 == w2  # square in cells
+    surface = mesh_fn(dem2, PX_M, scale_xy, Z_SCALE)
+    x = surface.vertices[:, 0]
+    y = surface.vertices[:, 1]
+    assert (x.max() - x.min()) == pytest.approx(150.0)
+    assert (y.max() - y.min()) == pytest.approx(150.0)
+
+
+def test_clip_and_scale_rejects_partial_dims():
+    from core.pipeline import _clip_and_scale
+
+    dem = _skewed_dem()
+    transform = from_origin(0.0, 30 * PX_M, PX_M, PX_M)
+    with pytest.raises(RuntimeError, match="BOTH width and height"):
+        _clip_and_scale(
+            dem, transform, PX_M, 200.0, clean_edges=True,
+            clip_width_mm=150.0, clip_height_mm=None,
+        )
+    with pytest.raises(RuntimeError, match="Straight edges"):
+        _clip_and_scale(
+            dem, transform, PX_M, 200.0, clean_edges=False,
+            clip_width_mm=150.0, clip_height_mm=150.0,
+        )
 
 
 def test_unclipped_skewed_mesh_is_ragged_by_contrast():

@@ -25,6 +25,8 @@ def generate_stl(req: GenerateRequest):
             base_thickness_mm=req.base_thickness_mm,
             water=req.water.model_dump(),
             clean_edges=req.clean_edges,
+            clip_width_mm=req.clip_width_mm,
+            clip_height_mm=req.clip_height_mm,
         )
         return FileResponse(path, filename="terrain.stl", media_type="application/sla")
     except RuntimeError as e:
@@ -50,6 +52,8 @@ def generate_3mf(req: Generate3MFRequest):
             road_etch=req.road_etch.model_dump(),
             water=req.water.model_dump(),
             clean_edges=req.clean_edges,
+            clip_width_mm=req.clip_width_mm,
+            clip_height_mm=req.clip_height_mm,
         )
         return FileResponse(path, filename="terrain.3mf", media_type="model/3mf")
     except RuntimeError as e:
@@ -75,6 +79,8 @@ def generate_bundle(req: GenerateRequest):
             water=req.water.model_dump(),
             color=req.color.model_dump() if req.color else None,
             clean_edges=req.clean_edges,
+            clip_width_mm=req.clip_width_mm,
+            clip_height_mm=req.clip_height_mm,
         )
         return FileResponse(
             zip_path, filename="terrain_bundle.zip", media_type="application/zip"

@@ -100,8 +100,19 @@ export default function Generator() {
   const [roads, setRoads] = useState(DEFAULT_ROADS);
   const [water, setWater] = useState(DEFAULT_WATER);
   const [color3mf, setColor3mf] = useState(DEFAULT_COLOR_3MF);
-  // F-35: clip the terrain to the largest clean rectangle before meshing.
+  // F-35: clip the terrain to a clean rectangle before meshing. F-36: the
+  // clip can be shape/size-constrained; typed mm then govern the scale.
   const [cleanEdges, setCleanEdges] = useState(false);
+  const [clip, setClip] = useState({
+    shape: 'largest',
+    side: '',
+    width: '',
+    height: '',
+  });
+
+  const updateClip = useCallback((key, value) => {
+    setClip((c) => ({ ...c, [key]: value }));
+  }, []);
   // Opt-in feature toggles (F-25): off means no inputs shown and, above all,
   // no Overpass fetch for that feature.
   const [features, setFeatures] = useState({
@@ -272,6 +283,21 @@ export default function Generator() {
         stream_depth_mm: Number(water.streamDepth || 0),
       },
       clean_edges: cleanEdges,
+      ...(cleanEdges && clip.shape === 'square' && Number(clip.side) > 0
+        ? {
+            clip_width_mm: Number(clip.side),
+            clip_height_mm: Number(clip.side),
+          }
+        : {}),
+      ...(cleanEdges &&
+      clip.shape === 'custom' &&
+      Number(clip.width) > 0 &&
+      Number(clip.height) > 0
+        ? {
+            clip_width_mm: Number(clip.width),
+            clip_height_mm: Number(clip.height),
+          }
+        : {}),
       color:
         features.color && colorComplete(color3mf)
           ? {
@@ -284,7 +310,7 @@ export default function Generator() {
             }
           : null,
     };
-  }, [terrain, roads, selectedRoadLevels, water, features, color3mf, widthFloorMm, cleanEdges]);
+  }, [terrain, roads, selectedRoadLevels, water, features, color3mf, widthFloorMm, cleanEdges, clip]);
 
   /* ---------------- polygon ---------------- */
 
@@ -514,6 +540,8 @@ export default function Generator() {
           }
           cleanEdges={cleanEdges}
           onCleanEdgesChange={setCleanEdges}
+          clip={clip}
+          onClipChange={updateClip}
           status={status}
         />
       </aside>

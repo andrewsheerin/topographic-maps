@@ -130,17 +130,48 @@ def _apply_water(
     return dem_arr, protect | stream_mask, lakes_utm, streams_utm
 
 
-def _clip_clean_rect(dem_arr, transform):
+def _clip_clean_rect(dem_arr, transform, aspect_wh=None):
     """Clip the DEM to the largest axis-aligned rectangle fully inside its
     footprint (F-35): the mesh then gets straight 90° edges instead of the
     stair-stepped margin that UTM reprojection leaves on drawn lat/lon
-    rectangles. Trims a sliver of the drawn area (the skew wedges) — that
-    margin is exactly the ragged part being cut off. Returns
-    (dem, transform)."""
-    r0, r1, c0, c1 = mesh_mod.largest_true_rect(mesh_mod.cell_ok_mask(dem_arr))
+    rectangles. With `aspect_wh` (F-36) the rectangle additionally honors
+    the requested width:height ratio and centers on the drawn area. Trims a
+    sliver of the drawn area (the skew wedges). Returns (dem, transform)."""
+    cell_ok = mesh_mod.cell_ok_mask(dem_arr)
+    if aspect_wh is None:
+        r0, r1, c0, c1 = mesh_mod.largest_true_rect(cell_ok)
+    else:
+        r0, r1, c0, c1 = mesh_mod.largest_true_rect_with_aspect(cell_ok, aspect_wh)
     # Cells r0..r1 / c0..c1 need vertex rows r0..r1+1 and cols c0..c1+1.
     dem2 = dem_arr[r0 : r1 + 2, c0 : c1 + 2]
     return dem2, transform * Affine.translation(c0, r0)
+
+
+def _clip_and_scale(
+    dem_arr, transform, px_m, target_max_mm, clean_edges,
+    clip_width_mm, clip_height_mm,
+):
+    """Shared clip + scale resolution (F-35/F-36). With clip dimensions the
+    typed millimetres govern the scale (Target max size is ignored — user
+    call 2026-09-04); the terrain is never stretched, so a custom W:H lands
+    within one cell of the requested ratio and a square is exact."""
+    dims = clip_width_mm is not None or clip_height_mm is not None
+    if dims and not (clean_edges and clip_width_mm and clip_height_mm):
+        raise RuntimeError(
+            "Clip dimensions need 'Straight edges' on and BOTH width and "
+            "height (equal values make a square)."
+        )
+    if clean_edges:
+        aspect = (
+            float(clip_width_mm) / float(clip_height_mm) if dims else None
+        )
+        dem_arr, transform = _clip_clean_rect(dem_arr, transform, aspect)
+    if dims:
+        n_cols_cells = dem_arr.shape[1] - 1
+        scale_xy = float(clip_width_mm) / (n_cols_cells * px_m * METERS_TO_MM)
+    else:
+        scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
+    return dem_arr, transform, scale_xy
 
 
 def _write_colored_3mf(out_path, dem_arr, water_mask, solid, color):
@@ -218,14 +249,17 @@ def generate_stl_from_polygon(
     base_thickness_mm,
     water=None,
     clean_edges=False,
+    clip_width_mm=None,
+    clip_height_mm=None,
 ):
     tmp = tempfile.mkdtemp()
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
         polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
     )
-    if clean_edges:
-        dem_arr, transform = _clip_clean_rect(dem_arr, transform)
-    scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
+    dem_arr, transform, scale_xy = _clip_and_scale(
+        dem_arr, transform, px_m, target_max_mm, clean_edges,
+        clip_width_mm, clip_height_mm,
+    )
 
     dem_arr, _, _, _ = _apply_water(
         dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
@@ -271,6 +305,8 @@ def generate_3mf_from_polygon(
     road_etch=None,
     water=None,
     clean_edges=False,
+    clip_width_mm=None,
+    clip_height_mm=None,
 ):
     """Colored 3MF export (F-23): the same terrain pipeline as the STL, plus a
     per-face class raster written via the 3MF Materials extension.
@@ -283,9 +319,10 @@ def generate_3mf_from_polygon(
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
         polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
     )
-    if clean_edges:
-        dem_arr, transform = _clip_clean_rect(dem_arr, transform)
-    scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
+    dem_arr, transform, scale_xy = _clip_and_scale(
+        dem_arr, transform, px_m, target_max_mm, clean_edges,
+        clip_width_mm, clip_height_mm,
+    )
 
     dem_arr, water_mask, _, _ = _apply_water(
         dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale, water
@@ -316,6 +353,8 @@ def generate_bundle_from_polygon(
     water=None,
     color=None,
     clean_edges=False,
+    clip_width_mm=None,
+    clip_height_mm=None,
 ):
     """The "everything" ZIP (F-25): raw STL + carved STL always; plus the
     colored 3MF when `color` is set, and UTM GeoJSON of whichever features
@@ -325,9 +364,10 @@ def generate_bundle_from_polygon(
     dem_arr, px_m, transform, epsg, poly_utm = _prepare_dem(
         polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
     )
-    if clean_edges:
-        dem_arr, transform = _clip_clean_rect(dem_arr, transform)
-    scale_xy = _scale_xy_from_extent(dem_arr, transform, target_max_mm)
+    dem_arr, transform, scale_xy = _clip_and_scale(
+        dem_arr, transform, px_m, target_max_mm, clean_edges,
+        clip_width_mm, clip_height_mm,
+    )
 
     # Raw mesh — the base terrain, no water, no roads.
     raw_mesh = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
