@@ -160,6 +160,21 @@ def test_clip_and_scale_rejects_partial_dims():
         )
 
 
+def test_target_max_size_is_hit_exactly(tmp_path):
+    # F-37 regression: a 100 mm target printed 99.65 mm because the scale
+    # divided by the pixel count while the mesh spans pixel-center intervals.
+    from core.pipeline import _scale_xy_from_extent
+
+    dem = np.full((143, 286), 500.0, dtype=np.float32)
+    transform = from_origin(0.0, 143 * PX_M, PX_M, PX_M)
+    scale_xy = _scale_xy_from_extent(dem, transform, 100.0)
+    surface = dem_to_mesh(dem, PX_M, scale_xy, Z_SCALE)
+    x = surface.vertices[:, 0]
+    y = surface.vertices[:, 1]
+    assert (x.max() - x.min()) == pytest.approx(100.0)  # long side == target
+    assert (y.max() - y.min()) == pytest.approx(100.0 * 142 / 285)
+
+
 def test_unclipped_skewed_mesh_is_ragged_by_contrast():
     # Sanity check of the premise: without the clip, the same DEM meshes to a
     # cropped, stair-stepped outline (fewer vertices than the full grid).

@@ -55,14 +55,13 @@ def _prepare_dem(polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample=1):
 
 
 def _scale_xy_from_extent(dem_arr, transform, target_max_mm):
-    """Print scale (mm-per-metre / METERS_TO_MM) from the DEM's real-world UTM
-    extent, not its pixel count."""
-    left = transform.c
-    top = transform.f
-    right = left + dem_arr.shape[1] * transform.a
-    bottom = top + dem_arr.shape[0] * transform.e
-    width_m = abs(right - left)
-    height_m = abs(top - bottom)
+    """Print scale (mm-per-metre / METERS_TO_MM) from the extent the mesh
+    actually spans: vertices sit at pixel centers, so a grid of n pixels
+    covers n-1 cell intervals. Dividing by the raster's pixel count instead
+    made every print (n-1)/n of the requested size — 99.65 mm for a 100 mm
+    target (F-37)."""
+    width_m = max(dem_arr.shape[1] - 1, 1) * abs(transform.a)
+    height_m = max(dem_arr.shape[0] - 1, 1) * abs(transform.e)
     max_dim_m = max(width_m, height_m)
     if max_dim_m <= 0 or not (max_dim_m == max_dim_m):  # NaN-safe
         raise RuntimeError(
