@@ -36,16 +36,20 @@ follow `.claude/rules/git.md` for this repo's policy (`.claude/TIER.md`).
    `python .claude/skills/cleanup/pm_check.py .` shows no errors. Private PM mode: commit inside
    `project-management/` with `git -C project-management`, then, if it has a remote,
    `git -C project-management push`, under either git policy (no verify needed: it's the PM
-   repo). In a worktree, that folder is the main folder's (`PM files:` at session start).
-7. **Push per the policy:**
+   repo). In a worktree with its own PM checkout (the session-start print says so), commit
+   there and don't push: the PM branch lands with the host branch. In a worktree without one,
+   the folder is the main folder's (`PM files: <path>`).
+7. **Push per the policy.** In a linked worktree under `main`, stop at the commits and say the
+   branch is ready to land (`.claude/rules/git.md`, "Landing a worktree"); the main folder
+   lands it.
    - `main`: verify passed → merge any finished short branch, then `git push origin main`. With
      `Deploys on push: yes` (a live site) the user pushes: hand over `! git push origin main`.
      Red verify: don't push; say why.
    - `pr`: push the branch. No PR yet → `gh pr create` with a body listing what changed, the
      F-n items and the verify summary; otherwise mention the new commits. Then put the main
      folder back on main.
-8. **Worktree:** if this session ran in a worktree whose branch is now merged, remove it from
-   the main folder (`git worktree remove <path>`, `git branch -d <branch>`). Never `--force`:
-   with uncommitted changes it stays, and you say so.
+8. **Worktree:** a worktree whose branch is now merged is removed from the main folder, its PM
+   checkout first, as git.md's "Landing a worktree" says. Never `--force`: with uncommitted
+   changes it stays, and you say so.
 9. **Tell the user**, five lines at most: what happened, what waits on them (D-n, C-n, a PR to
    merge), what's next, and any permission that would have made today faster.

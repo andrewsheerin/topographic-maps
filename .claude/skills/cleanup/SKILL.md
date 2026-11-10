@@ -19,6 +19,10 @@ Collect, then show the user one short table before changing anything:
   (`git branch -vv`, `git branch --merged main`, `git fetch --prune` first if there's a remote).
 - Worktrees (`git worktree list`), folders under `.claude/worktrees/` that aren't registered,
   and sibling copies of the repo next to it (e.g. `<repo>-old`, `<repo> (2)`): orphaned copies.
+- Private PM mode: the nested repo's PM checkouts and PM branches
+  (`git -C project-management worktree list`, `git -C project-management branch -vv`), and
+  whether each checkout has uncommitted edits. pm_check names PM branches that never landed
+  (`pm-branch`) and checkouts whose folder is gone (`pm-checkout`).
 - Stashes (`git stash list`; the stack is shared by every worktree).
 - `pr` policy: open PRs (`gh pr list`).
 - `python .claude/skills/cleanup/pm_check.py . --json`.
@@ -61,11 +65,16 @@ Carry on with everything that doesn't depend on the answers.
   inventory and verify summary in its body. The user merges.
 - **Either way:** delete branches merged into main (`git branch -d`), remove clean worktrees
   whose branch is merged (`git worktree remove`, no `--force`), and leave the main folder on
-  main.
+  main. A worktree with a PM checkout lands and goes as `.claude/rules/git.md`'s "Landing a
+  worktree" says: its PM branch is merged into the PM repo's main, then the PM checkout comes
+  off before the worktree. A PM checkout with uncommitted edits is the user's call: ask.
 - **Private PM mode:** the PM changes are committed inside `project-management/`
   (`git -C project-management commit`), then `git -C project-management push` if it has a
   remote, under either policy. No remote (`pm-remote`): say the PM files have no off-disk
-  copy and offer to create one, as `/pm-upgrade` step 6 does.
+  copy and offer to create one, as `/pm-upgrade` step 6 does. A PM branch with no checkout
+  that never landed (`pm-branch`) is merged like a worktree's (git.md); a merged one is
+  deleted with `git -C project-management branch -d`. For a checkout whose folder is gone
+  (`pm-checkout`), land its branch, then run `git -C project-management worktree prune`.
 
 ## 5. Report
 

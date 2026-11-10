@@ -214,6 +214,44 @@ def test_branch_that_still_tracks_private_pm(tmp_path):
     wt = tmp_path / "wt"
     git(host, "worktree", "add", "-q", str(wt), "feat/F-10-new")
     assert at(wt, "git switch feat/F-9-old") == "allow"
+    # With its own PM checkout (3.4), the worktree holds PM files git would overwrite too.
+    git(host / "project-management", "commit", "-q", "--allow-empty", "-m", "PM")
+    git(host / "project-management", "worktree", "add", "-q", "-b", "feat/F-10-new",
+        str(wt / "project-management"))
+    assert at(wt, "git switch feat/F-9-old") == "ask"
+
+
+def test_worktree_remove_with_its_pm_checkout_inside(tmp_path):
+    """git deletes a host worktree's ignored PM checkout, uncommitted edits and all; the nested
+    repo's own `worktree remove` refuses while it is dirty, so it has to go first."""
+    host = make_repo(tmp_path / "host", "Git policy: main\nPM mode: private\n")
+    git(host, "add", ".claude")
+    git(host, "commit", "-q", "-m", "tier")
+    (host / ".git/info/exclude").write_text("project-management/\n", encoding="utf-8")
+    pm = make_repo(host / "project-management")
+    git(host, "worktree", "add", "-q", "-b", "worktree-x", ".claude/worktrees/x")
+    git(host, "worktree", "add", "-q", "-b", "worktree-y", ".claude/worktrees/y")
+    git(pm, "worktree", "add", "-q", "-b", "worktree-x", "../.claude/worktrees/x/project-management")
+    ctx = guard.read_policy(str(host))
+
+    def at(where, command):
+        result = guard.evaluate(command, str(where), ctx)
+        return result[0] if result else "allow"
+
+    assert at(host, "git worktree remove .claude/worktrees/x") == "deny"
+    assert at(host, "git worktree remove --force .claude/worktrees/x") == "deny"
+    assert at(tmp_path, "git -C host worktree remove .claude/worktrees/x") == "deny"
+    assert at(tmp_path, f"git worktree remove {host.as_posix()}/.claude/worktrees/x") == "deny"
+    assert at(host, "git worktree remove .claude/worktrees/y") == "allow"  # no PM checkout
+    assert at(host, "git worktree remove --force .claude/worktrees/y") == "ask"
+    assert at(host, "git -C project-management worktree remove "
+                    "../.claude/worktrees/x/project-management") == "allow"
+    # The PM checkout commits and merges like the nested repo, under either policy.
+    pr = guard.Ctx("pr", False)
+    wt_pm = str(host / ".claude/worktrees/x/project-management")
+    assert guard.evaluate('git commit -m "docs(pm): F-3 row"', wt_pm, pr) is None
+    assert guard.evaluate("git -C project-management merge --no-ff worktree-x", str(host),
+                          pr) is None
 
 
 def run_main(repos, command, which="pr", tool="Bash"):

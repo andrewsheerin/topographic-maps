@@ -8,7 +8,8 @@ Runs every check that applies and skips (without failing) whatever isn't set up 
   Frontend  npm run lint / typecheck / test, when package.json defines them
 Python checks and ruff use the repo's .venv when there is one; ruff that is configured but
 can't be found fails rather than skips. In a linked worktree of a private-mode repo, pm_check
-reads the main folder's project-management/. Exit 0 = every check that ran passed; anything
+reads the worktree's own PM checkout, or the main folder's project-management/ when it has
+none. Exit 0 = every check that ran passed; anything
 else = fix it (or register it) before wrapping, pushing, or opening a PR.
 """
 import json

@@ -21,7 +21,7 @@ keep those four small and in the shapes below. `pm_check.py` (run by `verify.py`
 | `PLAN.md` | Purpose and scope · Roadmap · Architecture · Data model | About 500 lines, a soft target; the data model changes in the same commit as the schema |
 | `reports/sessions/` | `YYYY-MM-DD-HHMM[-slug].md`, clock time from `date`; one per session | Ends with `## Next session prompt`; optional `## Factory feedback` before it |
 | `reports/phases/` | `phase-<X>[-slug].md` | One per phase |
-| `reports/topics/` | `YYYY-MM-DD-topic.md`: research, reviews, audits, migrations | — |
+| `reports/topics/` | `YYYY-MM-DD-topic.md`: research, reviews, audits, migrations; the files they cite (a PDF, a spreadsheet) as `YYYY-MM-DD-topic.<ext>` | The one place for non-Markdown files |
 | `archive/` | Answered decisions, done chores, anything moved aside | Never deleted |
 
 No other documents: no NOTES.md, no TODO.md, no parallel trackers.
@@ -96,5 +96,8 @@ in a report or a `### C-n` block, linked from the row.
 
 `project-management/` is its own git repo, excluded from the host through `.git/info/exclude`.
 Commit PM changes inside it (`git -C project-management commit …`); its own main may be pushed to
-its private remote under either git policy. Worktrees of the host don't contain it: write to the
-main folder's `project-management/`, which the session-start print names (`PM files: <path>`).
+its private remote under either git policy. A worktree of the host gets its own PM checkout at
+session start: a linked worktree of the nested repo on a PM branch named after the host
+branch. Commit PM work there as you go, and leave the PM branch unpushed: it lands with the host
+branch (`.claude/rules/git.md`, "Landing a worktree"). A worktree with no checkout uses the main
+folder's `project-management/`, which the session-start print names (`PM files: <path>`).

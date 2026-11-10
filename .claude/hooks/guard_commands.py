@@ -19,8 +19,10 @@ main policy     allow push main, other branches, merge
 pr policy       deny  push to main/master, commit on main, merge into main (--ff-only is fine)
                 allow push other branches, gh pr create
 No readable policy counts as pr, the strict one. The nested project-management/ repo of private
-PM mode may commit and push its own main under either policy. In a folder holding that nested
-repo, it asks before switching to a branch that still tracks project-management/.
+PM mode, and a worktree's PM checkout of it, may commit, merge and push under either policy. In
+a folder holding either, it asks before switching to a branch that still tracks
+project-management/, and it denies `git worktree remove` of a host worktree that still holds its
+PM checkout: git would delete that ignored folder, uncommitted PM edits and all, without asking.
 
 It fails safe: on an internal error it asks before anything that looks like a push or merge and
 allows the rest, so a bug can never brick the shell. settings.json carries a deny list as backup.
@@ -83,14 +85,16 @@ def current_branch(cwd: str) -> str | None:
 
 
 def is_nested_pm(cwd: str) -> bool:
-    """The private-mode PM repo: its own git root, named project-management, inside a repo."""
+    """The private-mode PM repo, or a worktree's PM checkout of it: its own git root, named
+    project-management, inside a repo."""
     top = git_out(cwd, "rev-parse", "--show-toplevel")
     return bool(top) and Path(top).name == "project-management" and (
         Path(top).parent / ".claude").is_dir()
 
 
 def holds_nested_pm(cwd: str) -> bool:
-    """This folder's repo keeps a private-mode PM repo (the main folder, not a worktree)."""
+    """This folder's repo keeps a private-mode PM repo: the main folder's nested repo, or a
+    worktree's PM checkout (a `.git` file)."""
     top = git_out(cwd, "rev-parse", "--show-toplevel")
     return bool(top) and (Path(top) / "project-management" / ".git").exists()
 
@@ -340,6 +344,22 @@ def check_checkout(args: list[str], cwd: str):
     return None
 
 
+def check_worktree_remove(args: list[str], cwd: str):
+    """Deny removing a host worktree while its PM checkout is inside: git treats the ignored
+    folder as expendable and deletes it, uncommitted PM edits included. The nested repo's own
+    `worktree remove` refuses while the checkout is dirty, so that goes first."""
+    paths = [a for a in args[1:] if not a.startswith("-")]
+    checkout = Path(cwd, paths[0]) / "project-management" if paths else None
+    if checkout and (checkout / ".git").is_file():
+        return DENY, (f"{paths[0]} still holds its PM checkout, which git would delete without "
+                      "asking. Remove that first, from the main folder: git -C project-management "
+                      f"worktree remove {checkout.resolve().as_posix()} (it refuses while PM "
+                      "edits are uncommitted; .claude/rules/git.md)")
+    if any(a in ("-f", "--force") for a in args):
+        return ASK, "force-removing a worktree discards its uncommitted changes"
+    return None
+
+
 def check_git(tokens: list[str], cwd: str, ctx: Ctx):
     sub, args, cwd = git_parts(tokens, cwd)
     if sub is None:
@@ -348,6 +368,8 @@ def check_git(tokens: list[str], cwd: str, ctx: Ctx):
         return check_push(args, cwd, ctx)
     if sub in ("switch", "checkout"):
         return check_checkout(args, cwd)
+    if sub == "worktree" and args[:1] == ["remove"]:
+        return check_worktree_remove(args, cwd)
     if sub in ("filter-branch", "filter-repo"):
         return DENY, "rewriting history (filter-branch/filter-repo) is never allowed"
     if sub == "reset" and "--hard" in args:
@@ -357,8 +379,6 @@ def check_git(tokens: list[str], cwd: str, ctx: Ctx):
         return ASK, "git clean -f deletes untracked files"
     if sub == "branch" and ("-D" in args or ("--force" in args and "--delete" in args)):
         return ASK, "force-deleting a branch can lose unmerged work"
-    if sub == "worktree" and args[:1] == ["remove"] and any(a in ("-f", "--force") for a in args):
-        return ASK, "force-removing a worktree discards its uncommitted changes"
     if sub == "remote" and args[:1] and args[0] in ("add", "set-url", "remove", "rm", "rename"):
         return ASK, "this changes where the repo pushes; remotes are the user's call"
     if sub == "stash" and args[:1] == ["clear"]:
