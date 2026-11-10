@@ -9,7 +9,7 @@ Run 2026-11-09 from 20:01, interactively with Andrew, following
 
 - [x] 0 preconditions   - [ ] 3 settings confirmed   - [ ] 6 private mode (or n/a)
 - [x] 1 layout found    - [ ] 4 .claude installed    - [ ] 7 verified, reported, pushed
-- [ ] 2 code deps       - [ ] 5 content mapped
+- [x] 2 code deps       - [ ] 5 content mapped
 
 ## 0. Preconditions
 
@@ -48,3 +48,16 @@ Outside `project-management/`: a root `GUIDE.md` (the app-factory v2.1 owner's g
 | `header` | 2 | register has no Ref column; chores have no Due column |
 | `frontmatter`, `current-length` | 2 | CURRENT.md |
 | warnings | 15 | no next-session prompt; main folder off main; 13 merged branches (all cleared by the git step before this) |
+
+## 2. What code depends on: nothing frozen
+
+Searched every non-PM file (excluding `.venv/`, `node_modules/`) for `project-management`, the PM
+file names and `F-n`/`D-n`/`C-n`. No code reads or writes a PM file, so nothing is frozen and
+TIER.md needs no `pm_check ignore:` line. Mentions only, in comments and docs:
+
+- `backend/constants.py:6`, `backend/tests/test_carve_order.py:7` (cite `DECISIONS.md`, D-2, F-2),
+  `frontend/src/lib/geometry.js:10` (cites DECISIONS). Under private mode these point at files a
+  clone of the public repo won't have; left as they are (no app code changes).
+- `F-n` IDs in code comments and test docstrings across `backend/` and `frontend/`: IDs are kept,
+  so they stay valid.
+- `README.md` (lines 80, 81, 84) and `CLAUDE.md`: handled in step 4.
