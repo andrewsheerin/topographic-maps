@@ -40,9 +40,7 @@ def _solid_with_classes():
     solid = add_base(dem_to_mesh(dem2, PX_M, SCALE_XY, Z_SCALE), 2.0)
     # Bands equivalent to the old treeline/snowline model: water slot at 0,
     # then <1200, <2000, above.
-    cells = classify_terrain_cells(
-        dem2, water_mask, [1200.0, 2000.0], band_offset=1
-    )
+    cells = classify_terrain_cells(dem2, water_mask, [1200.0, 2000.0], band_offset=1)
     face_cls = face_classes_for_solid(dem2, cells, len(solid.faces))
     return solid, face_cls
 
@@ -147,8 +145,9 @@ def test_classification_arbitrary_band_count():
     cells = classify_terrain_cells(dem, None, [200.0, 400.0, 600.0, 800.0])
     assert list(cells[:, 0]) == [0, 1, 2, 3, 4]
     # With a water slot, everything shifts up by one.
-    shifted = classify_terrain_cells(dem, None, [200.0, 400.0, 600.0, 800.0],
-                                     band_offset=1)
+    shifted = classify_terrain_cells(
+        dem, None, [200.0, 400.0, 600.0, 800.0], band_offset=1
+    )
     assert list(shifted[:, 0]) == [1, 2, 3, 4, 5]
 
 
@@ -179,7 +178,10 @@ def test_write_colored_3mf_sorts_bands_and_builds_palette(tmp_path):
     colors = root.findall(f".//{{{MATERIAL_NS}}}colorgroup/{{{MATERIAL_NS}}}color")
     # Palette: water first, then bands sorted by cutoff, unbounded last.
     assert [c.get("color") for c in colors] == [
-        "#001489", "#034638", "#7F7E83", "#FFFFFF",
+        "#001489",
+        "#034638",
+        "#7F7E83",
+        "#FFFFFF",
     ]
     obj = root.find(f".//{{{CORE_NS}}}object")
     assert obj.get("pindex") == "1"  # base/walls take the lowest band

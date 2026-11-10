@@ -79,9 +79,7 @@ def write_3mf(path, vertices_mm, faces, face_classes, colors_hex, default_index)
         if cls == -1:
             parts.append(f'     <triangle v1="{v1}" v2="{v2}" v3="{v3}"/>\n')
         elif 0 <= cls < n_colors:
-            parts.append(
-                f'     <triangle v1="{v1}" v2="{v2}" v3="{v3}" p1="{cls}"/>\n'
-            )
+            parts.append(f'     <triangle v1="{v1}" v2="{v2}" v3="{v3}" p1="{cls}"/>\n')
         else:
             raise ValueError(f"Face class {cls} is outside the palette.")
 

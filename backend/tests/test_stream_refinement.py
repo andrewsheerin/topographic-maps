@@ -2,9 +2,8 @@
 motivating case: ~9.5 km box printed at 250 mm on COP30 (30 m cells), i.e.
 scale_xy ≈ 2.63e-5 and one DEM cell ≈ 0.79 mm at print scale."""
 
-import geopandas as gpd
 import numpy as np
-from rasterio.transform import Affine, from_origin
+from rasterio.transform import from_origin
 from shapely.geometry import LineString
 
 import constants
@@ -36,8 +35,9 @@ def test_fractional_coverage_produces_intermediate_depths():
     carved = 1000.0 - dem2[dem2 < 1000.0]
     assert carved.size > 0
     # Intermediate depths exist (strictly between zero and the full delta).
-    intermediate = carved[(carved > 0.01 * DELTA_FULL_M)
-                          & (carved < 0.95 * DELTA_FULL_M)]
+    intermediate = carved[
+        (carved > 0.01 * DELTA_FULL_M) & (carved < 0.95 * DELTA_FULL_M)
+    ]
     assert intermediate.size > 0
     # And nothing exceeds the requested full depth.
     assert carved.max() <= DELTA_FULL_M * 1.0001
@@ -120,12 +120,22 @@ def test_width_floor_clamps_sub_floor_requests():
     line = LineString([(0.0, 605.0), (1200.0, 605.0)])
     floor_mm = stream_width_floor_mm(PX_M, SCALE_XY)
     below, _ = carve_streams(
-        dem, transform, stream_gdf([("stream", line)]),
-        SCALE_XY, Z_SCALE, {"stream": 0.1}, 0.4,
+        dem,
+        transform,
+        stream_gdf([("stream", line)]),
+        SCALE_XY,
+        Z_SCALE,
+        {"stream": 0.1},
+        0.4,
     )
     at_floor, _ = carve_streams(
-        dem, transform, stream_gdf([("stream", line)]),
-        SCALE_XY, Z_SCALE, {"stream": floor_mm}, 0.4,
+        dem,
+        transform,
+        stream_gdf([("stream", line)]),
+        SCALE_XY,
+        Z_SCALE,
+        {"stream": floor_mm},
+        0.4,
     )
     assert np.allclose(below, at_floor, equal_nan=True)
     assert (below < 1000.0).any()

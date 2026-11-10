@@ -133,9 +133,7 @@ def flatten_water(dem, transform, water_polys, scale_xy, z_scale, recess_mm):
         ) & np.isfinite(dem)
         if not mask.any():
             continue
-        plane_m = float(
-            np.percentile(dem[mask], constants.WATER_LEVEL_PERCENTILE)
-        )
+        plane_m = float(np.percentile(dem[mask], constants.WATER_LEVEL_PERCENTILE))
         dem2[mask] = np.float32(plane_m - delta)
         water_mask |= mask
 
@@ -185,8 +183,15 @@ def _fractional_coverage(geoms_buffered, shape, transform, aa):
 
 
 def carve_streams(
-    dem, transform, gdf_streams, scale_xy, z_scale, widths_mm, depth_mm,
-    protect_mask=None, aa=constants.STREAM_AA_FACTOR,
+    dem,
+    transform,
+    gdf_streams,
+    scale_xy,
+    z_scale,
+    widths_mm,
+    depth_mm,
+    protect_mask=None,
+    aa=constants.STREAM_AA_FACTOR,
 ):
     """Recess waterway centerlines into the DEM (F-22, reworked in F-28).
 
@@ -301,9 +306,7 @@ def classify_terrain_cells(dem, water_mask, cutoffs_m, band_offset=0):
     pass water_mask=None when the palette has no water slot. The cutoffs are
     per-request user values (science-integrity: never defaulted here)."""
     mean_m = (dem[:-1, :-1] + dem[:-1, 1:] + dem[1:, :-1] + dem[1:, 1:]) / 4.0
-    idx = np.searchsorted(
-        np.asarray(cutoffs_m, dtype=np.float64), mean_m, side="right"
-    )
+    idx = np.searchsorted(np.asarray(cutoffs_m, dtype=np.float64), mean_m, side="right")
     cls = (idx + int(band_offset)).astype(np.int16)
     if water_mask is not None:
         water_cell = (
