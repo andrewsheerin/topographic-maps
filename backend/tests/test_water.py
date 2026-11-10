@@ -30,6 +30,7 @@ def stream_gdf(records, epsg=32611):
         crs=epsg,
     )
 
+
 PX_M = 10.0
 SCALE_XY = 0.001  # mm per metre / METERS_TO_MM
 Z_SCALE = 2.0
@@ -93,8 +94,14 @@ def test_stream_carves_outside_but_not_through_a_lake():
     # A stream straight across row 4 (y=155), through the middle of lake 1.
     streams = stream_gdf([("stream", LineString([(0.0, 155.0), (200.0, 155.0)]))])
     dem3, color_mask = carve_streams(
-        dem2, TRANSFORM, streams, SCALE_XY, Z_SCALE,
-        {"stream": 1.0}, 0.4, protect_mask=water_mask,
+        dem2,
+        TRANSFORM,
+        streams,
+        SCALE_XY,
+        Z_SCALE,
+        {"stream": 1.0},
+        0.4,
+        protect_mask=water_mask,
     )
 
     assert np.all(dem3[4, :2] < 100.0)  # carved before the lake
@@ -116,9 +123,14 @@ def test_flatten_and_carve_still_seal_watertight():
         dem, transform, [box(51.0, 51.0, 129.0, 129.0)], SCALE_XY, Z_SCALE, 0.6
     )
     dem3, _ = carve_streams(
-        dem2, transform,
+        dem2,
+        transform,
         stream_gdf([("river", LineString([(0.0, 90.0), (300.0, 210.0)]))]),
-        SCALE_XY, Z_SCALE, {"river": 1.6}, 0.4, protect_mask=water_mask,
+        SCALE_XY,
+        Z_SCALE,
+        {"river": 1.6},
+        0.4,
+        protect_mask=water_mask,
     )
 
     solid = add_base(dem_to_mesh(dem3, PX_M, SCALE_XY, Z_SCALE), 2.0)
@@ -146,8 +158,14 @@ def test_sea_flattens_to_recessed_plane_and_protects_from_streams():
     # A stream flowing into the bay carves land but never the sea plane.
     stream = LineString([(0.0, 155.0), (200.0, 155.0)])
     dem3, _ = carve_streams(
-        dem2, TRANSFORM, stream_gdf([("stream", stream)]),
-        SCALE_XY, Z_SCALE, {"stream": 1.0}, 0.4, protect_mask=sea_mask,
+        dem2,
+        TRANSFORM,
+        stream_gdf([("stream", stream)]),
+        SCALE_XY,
+        Z_SCALE,
+        {"stream": 1.0},
+        0.4,
+        protect_mask=sea_mask,
     )
     assert np.all(dem3[4, :8] == np.float32(0.2))  # bay plane intact
     assert np.all(dem3[4, 8:] < 50.0)  # land carved

@@ -147,8 +147,13 @@ def _clip_clean_rect(dem_arr, transform, aspect_wh=None):
 
 
 def _clip_and_scale(
-    dem_arr, transform, px_m, target_max_mm, clean_edges,
-    clip_width_mm, clip_height_mm,
+    dem_arr,
+    transform,
+    px_m,
+    target_max_mm,
+    clean_edges,
+    clip_width_mm,
+    clip_height_mm,
 ):
     """Shared clip + scale resolution (F-35/F-36). With clip dimensions the
     typed millimetres govern the scale (Target max size is ignored — user
@@ -161,9 +166,7 @@ def _clip_and_scale(
             "height (equal values make a square)."
         )
     if clean_edges:
-        aspect = (
-            float(clip_width_mm) / float(clip_height_mm) if dims else None
-        )
+        aspect = float(clip_width_mm) / float(clip_height_mm) if dims else None
         dem_arr, transform = _clip_clean_rect(dem_arr, transform, aspect)
     if dims:
         n_cols_cells = dem_arr.shape[1] - 1
@@ -256,8 +259,13 @@ def generate_stl_from_polygon(
         polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
     )
     dem_arr, transform, scale_xy = _clip_and_scale(
-        dem_arr, transform, px_m, target_max_mm, clean_edges,
-        clip_width_mm, clip_height_mm,
+        dem_arr,
+        transform,
+        px_m,
+        target_max_mm,
+        clean_edges,
+        clip_width_mm,
+        clip_height_mm,
     )
 
     dem_arr, _, _, _ = _apply_water(
@@ -275,8 +283,15 @@ def generate_stl_from_polygon(
 
 
 def _fetch_and_carve_roads(
-    dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale,
-    road_levels, road_etch,
+    dem_arr,
+    transform,
+    polygon_wgs84,
+    epsg,
+    poly_utm,
+    scale_xy,
+    z_scale,
+    road_levels,
+    road_etch,
 ):
     """Fetch roads and carve them into the DEM; returns (dem, roads_gdf_utm)."""
     roads_fc_wgs84 = roads_mod.fetch_roads_geojson_overpass(polygon_wgs84, road_levels)
@@ -319,8 +334,13 @@ def generate_3mf_from_polygon(
         polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
     )
     dem_arr, transform, scale_xy = _clip_and_scale(
-        dem_arr, transform, px_m, target_max_mm, clean_edges,
-        clip_width_mm, clip_height_mm,
+        dem_arr,
+        transform,
+        px_m,
+        target_max_mm,
+        clean_edges,
+        clip_width_mm,
+        clip_height_mm,
     )
 
     dem_arr, water_mask, _, _ = _apply_water(
@@ -328,8 +348,15 @@ def generate_3mf_from_polygon(
     )
     if road_levels:
         dem_arr, _ = _fetch_and_carve_roads(
-            dem_arr, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale,
-            road_levels, road_etch,
+            dem_arr,
+            transform,
+            polygon_wgs84,
+            epsg,
+            poly_utm,
+            scale_xy,
+            z_scale,
+            road_levels,
+            road_etch,
         )
 
     surface = mesh_mod.dem_to_mesh(dem_arr, px_m, scale_xy, z_scale)
@@ -364,8 +391,13 @@ def generate_bundle_from_polygon(
         polygon_wgs84, dem_dataset, downsample, tmp, dem_upsample
     )
     dem_arr, transform, scale_xy = _clip_and_scale(
-        dem_arr, transform, px_m, target_max_mm, clean_edges,
-        clip_width_mm, clip_height_mm,
+        dem_arr,
+        transform,
+        px_m,
+        target_max_mm,
+        clean_edges,
+        clip_width_mm,
+        clip_height_mm,
     )
 
     # Raw mesh — the base terrain, no water, no roads.
@@ -382,8 +414,15 @@ def generate_bundle_from_polygon(
     gdf_roads_utm = None
     if road_levels:
         carved_dem, gdf_roads_utm = _fetch_and_carve_roads(
-            carved_dem, transform, polygon_wgs84, epsg, poly_utm, scale_xy, z_scale,
-            road_levels, road_etch,
+            carved_dem,
+            transform,
+            polygon_wgs84,
+            epsg,
+            poly_utm,
+            scale_xy,
+            z_scale,
+            road_levels,
+            road_etch,
         )
 
     carved_mesh = mesh_mod.dem_to_mesh(carved_dem, px_m, scale_xy, z_scale)

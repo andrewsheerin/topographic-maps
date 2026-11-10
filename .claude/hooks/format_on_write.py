@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """PostToolUse formatter for Edit|Write. Cross-platform. Never blocks (always exit 0);
-silently no-ops when a formatter isn't installed."""
+silently no-ops when a formatter isn't installed. Markdown is left alone: prettier re-aligns
+every row of a table when one cell widens, which buries real changes to the PM docs in diffs."""
 import json
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-PRETTIER_EXTS = {".ts", ".tsx", ".js", ".jsx", ".css", ".json", ".md"}
+PRETTIER_EXTS = {".ts", ".tsx", ".js", ".jsx", ".css", ".json"}
 
 
 def run(args):

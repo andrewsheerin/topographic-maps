@@ -1,3 +1,8 @@
+---
+paths:
+  - "frontend/**"
+---
+
 # Frontend standards
 
 Two goals, in order: **(1) every screen in this app looks like it came from the same app;

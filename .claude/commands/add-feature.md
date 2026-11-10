@@ -1,24 +1,28 @@
 ---
-description: Add a feature — registered, scoped to tier, then built
+description: Add a feature — registered, scoped to the tier, then built on the right branch
+argument-hint: <one-line description of the feature>
 ---
 
-I want to add a feature. Before code:
+$ARGUMENTS is the feature (or take it from the conversation).
 
-**1. Restate it** in one sentence. Ask now if ambiguous — features are always my call, every tier.
+1. **Restate it in one sentence.** Features are always the user's call, at every tier; ask now
+   if it's ambiguous.
+2. **Register it:** the next `F-n` row in `FEATURE_REGISTER.md` (Item, Type, Phase, PLANNED).
+   If it belongs later, Phase `later`, and ask whether to pull it forward.
+3. **Blast radius:** which files change, and whether it touches schema, design tokens,
+   architecture, a dependency, auth or domain logic. Route those per the tier (L1 mostly
+   decide-and-log; L2 the reversibility test; L3 stop).
+4. **Propose the smallest version that delivers the value**, and name what's left out. Nothing
+   above the tier.
+5. **Build** (L1 proceeds; L2/L3 wait if a gate applies). Set the row to WIP; one WIP at a time.
+   Where to work, per `.claude/rules/git.md`:
+   - `main` policy: on main, or a short `feat/F-n-slug` branch if risky or multi-session.
+   - `pr` policy: a fresh `feat/F-n-slug` branch from an up-to-date main.
+   - Something else already running in this repo: a worktree under `.claude/worktrees/`.
+   Commit at logical points. A second problem found on the way → a new row; keep going.
+6. **Ship it** per the policy: `main` → merge any branch, verify, push main. `pr` → push the
+   branch, open the PR (body: what changed, F-n, verify summary), main folder back on main.
 
-**2. Register it.** Row in `FEATURE_REGISTER.md` (next F-n, type, phase, PLANNED). If it belongs
-in a later phase, set Phase = later, tell me, and ask whether to pull it forward.
-
-**3. Blast radius.** Which files change; whether it touches schema, tokens, architecture, or
-domain logic — and route those per the current tier's decision rules (L1: mostly decide-and-log;
-L2: reversibility test; L3: stop).
-
-**4. Propose the smallest version that delivers the value**, and name what you're leaving out.
-Check leftovers against the tier — don't build above it.
-
-**5. Build** (per tier: L1 proceeds; L2/L3 wait if a gate applies) — on a fresh branch:
-`<type>/F-n-short-slug` off `main`. One primary item WIP, `CURRENT.md`
-live, commits at logical points. Second problem discovered → new register row, keep moving.
-
-**Done means:** status DONE + commit hash(es) in the register, `DATABASE.md` updated if schema
-moved, no dead code, no off-token CSS, no new dependency that skipped its gate.
+**Done means:** DONE with `Ref` filled (hash, or `#PR` under `pr`), `DATABASE.md` updated if the
+schema moved, no dead code, no off-token CSS, no dependency that skipped its gate, and
+`python verify.py` green (or its reds registered).

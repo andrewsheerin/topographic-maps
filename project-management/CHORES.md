@@ -1,14 +1,14 @@
 # Chores
 
-Manual tasks only the user can do: accounts, credentials, DNS, payments, console clicking,
-pushing/merging, `terraform apply`, anything needing a human in a browser.
+Tasks only the user can do: accounts, credentials, DNS, payments, console clicks, merging PRs,
+`terraform apply`, anything needing a human in a browser. Each is doable without further
+thought: exact steps and values in Notes, or a `### C-n` block below for multi-step ones.
+Due is `YYYY-MM-DD` or blank. DONE rows move to `archive/CHORES-done.md` at /cleanup.
 
-Each chore must be executable without further thought — exact steps and values.
-
-| ID | Chore | Blocks | Status | Notes |
-| --- | --- | --- | --- | --- |
-| C-1 | Rotate the OpenTopography API key (it is exposed in git history) | security | TODO | See details. Do this even though the app still works with the old key. |
-| C-2 | Enable branch protection on `main` when the repo goes to GitHub | factory workflow | TODO | Settings → Branches → require a PR, block force-pushes. The real wall behind the git hooks. |
+| ID | Chore | Blocks | Due | Status | Notes |
+| --- | --- | --- | --- | --- | --- |
+| C-1 | Rotate the OpenTopography API key (it is exposed in git history) | security | | TODO | See details. Do this even though the app still works with the old key. |
+| C-2 | Enable branch protection on `main` when the repo goes to GitHub | factory workflow | | TODO | Settings → Branches → require a PR, block force-pushes. The real wall behind the git hooks. |
 
 ## Details
 

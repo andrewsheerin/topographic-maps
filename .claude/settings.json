@@ -1,12 +1,29 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "deny": [
-      "Bash(git push:*)",
-      "Bash(git merge:*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f *)",
+      "Bash(git push --mirror*)",
       "Bash(git rebase:*)",
-      "Bash(terraform apply:*)",
-      "Bash(terraform destroy:*)",
-      "Bash(terraform import:*)"
+      "Bash(git filter-branch*)",
+      "Bash(git filter-repo*)",
+      "Bash(gh pr merge*)",
+      "Bash(terraform apply*)",
+      "Bash(terraform destroy*)",
+      "Bash(terraform import*)",
+      "PowerShell(git push --force*)",
+      "PowerShell(git push -f *)",
+      "PowerShell(git push --mirror*)",
+      "PowerShell(gh pr merge*)",
+      "PowerShell(terraform apply*)",
+      "PowerShell(terraform destroy*)",
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.production)",
+      "Read(**/*.tfstate)",
+      "Read(**/*.tfstate.backup)",
+      "Read(**/*.tfvars)"
     ],
     "ask": [
       "Bash(rm -rf:*)",
@@ -16,9 +33,9 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Bash|PowerShell",
         "hooks": [
-          { "type": "command", "command": "python C:/Users/flow/CursorProjects/topographic-maps/.claude/hooks/guard_commands.py" }
+          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_commands.py\"" }
         ]
       }
     ],
@@ -26,14 +43,14 @@
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "python C:/Users/flow/CursorProjects/topographic-maps/.claude/hooks/format_on_write.py", "timeout": 30 }
+          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/format_on_write.py\"", "timeout": 30 }
         ]
       }
     ],
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "python -c \"print(open('project-management/CURRENT.md').read()); print(open('.claude/TIER.md').read())\"" }
+          { "type": "command", "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_start.py\"" }
         ]
       }
     ]

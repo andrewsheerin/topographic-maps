@@ -32,8 +32,9 @@ build/
 .DS_Store
 Thumbs.db
 
-# Claude Code local overrides
+# Claude Code local overrides and worktrees
 .claude/settings.local.json
+.claude/worktrees/
 
 # Generated data + app outputs
 data/*.db

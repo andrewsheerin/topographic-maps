@@ -10,6 +10,8 @@ from core.mesh import (
     add_base,
     dem_to_mesh,
     largest_true_rect,
+)
+from core.mesh import (
     largest_true_rect_with_aspect as mesh_largest_aspect,
 )
 from core.pipeline import _clip_clean_rect
@@ -130,8 +132,13 @@ def test_clip_and_scale_dims_govern_exact_print_size():
     dem = _skewed_dem()
     transform = from_origin(0.0, 30 * PX_M, PX_M, PX_M)
     dem2, t2, scale_xy = _clip_and_scale(
-        dem, transform, PX_M, target_max_mm=999.0, clean_edges=True,
-        clip_width_mm=150.0, clip_height_mm=150.0,
+        dem,
+        transform,
+        PX_M,
+        target_max_mm=999.0,
+        clean_edges=True,
+        clip_width_mm=150.0,
+        clip_height_mm=150.0,
     )
     assert np.isfinite(dem2).all()
     h2, w2 = dem2.shape
@@ -150,13 +157,23 @@ def test_clip_and_scale_rejects_partial_dims():
     transform = from_origin(0.0, 30 * PX_M, PX_M, PX_M)
     with pytest.raises(RuntimeError, match="BOTH width and height"):
         _clip_and_scale(
-            dem, transform, PX_M, 200.0, clean_edges=True,
-            clip_width_mm=150.0, clip_height_mm=None,
+            dem,
+            transform,
+            PX_M,
+            200.0,
+            clean_edges=True,
+            clip_width_mm=150.0,
+            clip_height_mm=None,
         )
     with pytest.raises(RuntimeError, match="Straight edges"):
         _clip_and_scale(
-            dem, transform, PX_M, 200.0, clean_edges=False,
-            clip_width_mm=150.0, clip_height_mm=150.0,
+            dem,
+            transform,
+            PX_M,
+            200.0,
+            clean_edges=False,
+            clip_width_mm=150.0,
+            clip_height_mm=150.0,
         )
 
 

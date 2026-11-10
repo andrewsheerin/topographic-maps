@@ -85,11 +85,7 @@ def fetch_water_overpass(
             f'way["waterway"~"^({waterway_re})$"]{name_filter}(poly:"{poly_str}");'
         )
 
-    query = (
-        "[out:json][timeout:60];\n(\n  "
-        + "\n  ".join(blocks)
-        + "\n);\nout geom;\n"
-    )
+    query = "[out:json][timeout:60];\n(\n  " + "\n  ".join(blocks) + "\n);\nout geom;\n"
     data = _post_overpass(query, timeout_s=70, max_retries=3)
 
     for el in data.get("elements", []):

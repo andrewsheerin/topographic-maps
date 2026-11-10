@@ -12,7 +12,7 @@ printer. Built for the author's own use.
 ## Tier
 
 **L1 — Build it.** Greenfield, local, single user, no auth, no deployment. The risk here is
-over-building; posture is lean. See `.claude/rules/tier-L1.md`. Graduate to L2 when it needs
+over-building; posture is lean. See `.claude/tiers/L1.md`. Graduate to L2 when it needs
 hardening for anyone but the author.
 
 ## In scope (v1)
