@@ -5,7 +5,8 @@ Reads the repo's git policy from .claude/TIER.md (`Git policy: main|pr`, `Deploy
 yes|no`) and answers on stdout with a permissionDecision: "deny" blocks, "ask" puts the command
 to the user, no output allows. It parses shell syntax, so chaining (`a && git push`), `git -C`,
 `cd x && ...`, subshells (`bash -c "..."`) and `$(...)` are judged like plain commands, while
-text inside single quotes (a commit message) is data, not a command.
+text inside single quotes, heredocs and PowerShell here-strings (a commit message) is data, not
+a command, unless it is fed to a shell or expands a substitution.
 
 Both policies   deny  force-push, push --all/--mirror, filter-branch/filter-repo, gh pr merge,
                       terraform apply/destroy/import/taint and state edits, docker push,
@@ -13,11 +14,13 @@ Both policies   deny  force-push, push --all/--mirror, filter-branch/filter-repo
                 ask   git reset --hard, git clean -f, git branch -D, git worktree remove --force,
                       deleting a remote branch, git remote add/set-url/remove, gh repo create,
                       git stash clear, tawa deploy/promote/approve
-main policy     allow push main (ask instead when Deploys on push: yes), other branches, merge
+main policy     allow push main, other branches, merge
+                deny  push main when Deploys on push: yes (a live site: the user pushes it)
 pr policy       deny  push to main/master, commit on main, merge into main (--ff-only is fine)
                 allow push other branches, gh pr create
 No readable policy counts as pr, the strict one. The nested project-management/ repo of private
-PM mode may commit and push its own main under either policy.
+PM mode may commit and push its own main under either policy. In a folder holding that nested
+repo, it asks before switching to a branch that still tracks project-management/.
 
 It fails safe: on an internal error it asks before anything that looks like a push or merge and
 allows the rest, so a bug can never brick the shell. settings.json carries a deny list as backup.
@@ -86,10 +89,133 @@ def is_nested_pm(cwd: str) -> bool:
         Path(top).parent / ".claude").is_dir()
 
 
+def holds_nested_pm(cwd: str) -> bool:
+    """This folder's repo keeps a private-mode PM repo (the main folder, not a worktree)."""
+    top = git_out(cwd, "rev-parse", "--show-toplevel")
+    return bool(top) and (Path(top) / "project-management" / ".git").exists()
+
+
 # --- shell parsing (from lca-pave-app's field-tested guard) -----------------------------------
 
 def _without_single_quoted(command: str) -> str:
     return re.sub(r"'[^']*'", "  ", command)
+
+
+# --- heredocs and here-strings: their bodies are data unless they feed a shell -------------------
+
+HEREDOC_RE = re.compile(r"<<(-?)[ \t]*(?:(['\"])([^'\"\s]+)\2|(\\?)([A-Za-z0-9_]+))")
+PS_HERESTRING_RE = re.compile(r"@(['\"])[ \t]*\r?\n(.*?)\r?\n\1@", re.S)
+RUNS_TEXT = {"bash", "sh", "zsh", "dash", "ksh", "cmd", "powershell", "pwsh", "eval", "source",
+             ".", "xargs", "ssh", "iex", "invoke-expression"}
+
+
+def feeds_shell(line: str) -> bool:
+    """Whether a command line hands text to something that runs it as commands."""
+    for segment in split_segments(line):
+        try:
+            tokens = shlex.split(segment, posix=True)
+        except ValueError:
+            tokens = segment.split()
+        if any(prog_name(t) in RUNS_TEXT for t in tokens):
+            return True
+    return False
+
+
+def substitutions(text: str, backticks: bool = True) -> list[str]:
+    """The commands inside $( ) (balanced) and, for bash, `...` in text the shell expands."""
+    found, i = [], 0
+    while (start := text.find("$(", i)) != -1:
+        depth, j = 1, start + 2
+        while j < len(text) and depth:
+            depth += {"(": 1, ")": -1}.get(text[j], 0)
+            j += 1
+        found.append(text[start + 2:j - 1])
+        i = j
+    return found + (re.findall(r"`([^`]*)`", text) if backticks else [])
+
+
+def lift_heredocs(command: str) -> tuple[str, list[str]]:
+    """The command with heredoc and PowerShell here-string bodies taken out, plus whatever in
+    those bodies still runs: the whole body when it feeds a shell, else the substitutions an
+    unquoted body expands. So a commit message in `git commit -F - <<'EOF'` or `-m @'...'@` is
+    data. A heredoc with no closing line lifts nothing: the command is judged as before."""
+    extras: list[str] = []
+
+    def here_string(m: re.Match) -> str:
+        line_start = command.rfind("\n", 0, m.start()) + 1
+        line_end = command.find("\n", m.end())
+        around = command[line_start:m.start()] + command[m.end():None if line_end < 0 else line_end]
+        if feeds_shell(around):
+            extras.append(m.group(2))
+        elif m.group(1) == '"':
+            extras.extend(substitutions(m.group(2), backticks=False))
+        return "''"
+
+    command = PS_HERESTRING_RE.sub(here_string, command)
+    out, stack, pending, i, n = [], ["code"], [], 0, len(command)
+    while i < n:
+        ch, ctx = command[i], stack[-1]
+        if ctx == "single":
+            if ch == "'":
+                stack.pop()
+        elif ch == "\\":
+            out.append(command[i:i + 2])
+            i += 2
+            continue
+        elif ctx == "double" and ch == '"':
+            stack.pop()
+        elif command.startswith("$(", i):
+            stack.append("code")
+            out.append("$(")
+            i += 2
+            continue
+        elif ctx == "double":
+            pass
+        elif ch == "'":
+            stack.append("single")
+        elif ch == '"':
+            stack.append("double")
+        elif ch == "(":
+            stack.append("code")
+        elif ch == ")" and len(stack) > 1:
+            stack.pop()
+        elif command.startswith("<<<", i):
+            out.append("<<<")
+            i += 3
+            continue
+        elif command.startswith("<<", i) and (m := HEREDOC_RE.match(command, i)):
+            pending.append((m.group(1) == "-", bool(m.group(2) or m.group(4)),
+                            m.group(3) or m.group(5)))
+            out.append(m.group(0))
+            i = m.end()
+            continue
+        elif ch == "\n" and pending:  # the bodies start on the next line, in order
+            line = "".join(out)
+            shell = feeds_shell(line[line.rfind("\n") + 1:])
+            j = i + 1
+            for dash, quoted, word in pending:
+                body = []
+                while True:
+                    if j >= n:
+                        return command, extras  # never closed: lift nothing more
+                    k = command.find("\n", j)
+                    k = n if k < 0 else k
+                    text = command[j:k].rstrip("\r")
+                    j = k + 1
+                    if (text.lstrip("\t") if dash else text) == word:
+                        break
+                    body.append(text)
+                if shell:
+                    extras.append("\n".join(body))
+                elif not quoted:
+                    extras.extend(substitutions("\n".join(body)))
+            pending = []
+            out.append("\n")
+            i = j
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out), extras
 
 
 def split_segments(command: str) -> list[str]:
@@ -188,7 +314,29 @@ def check_push(args: list[str], cwd: str, ctx: Ctx):
         return DENY, ("pr policy: main moves only by a merged PR. Push the branch and open a PR "
                       "(gh pr create); the user merges")
     if ctx.deploys_on_push:
-        return ASK, "pushing main deploys this repo (Deploys on push: yes); the user confirms"
+        return DENY, ("pushing main deploys this site (Deploys on push: yes), so the user pushes "
+                      "it: commit, then hand over `! git push origin main`")
+    return None
+
+
+def check_checkout(args: list[str], cwd: str):
+    """Ask before checking out a commit that still tracks project-management/ in a folder that
+    holds the private PM repo: git overwrites ignored files silently, and switching back
+    deletes them."""
+    if "--" in args or "--no-overwrite-ignore" in args or not holds_nested_pm(cwd):
+        return None
+    refs, skip_next = [], False
+    for a in args:
+        if skip_next:
+            skip_next = False
+        elif a in ("-c", "-C", "-b", "-B", "--create", "--force-create", "--orphan"):
+            skip_next = True  # the new branch's name, not a commit
+        elif not a.startswith("-"):
+            refs.append(a)
+    if refs and git_out(cwd, "ls-tree", "-d", "--name-only", refs[0], "project-management"):
+        return ASK, (f"'{refs[0]}' still tracks project-management/: checking it out here "
+                     "overwrites the private PM files, and switching back deletes them. Open it "
+                     "in a worktree and merge main into it there (.claude/rules/git.md)")
     return None
 
 
@@ -198,6 +346,8 @@ def check_git(tokens: list[str], cwd: str, ctx: Ctx):
         return None
     if sub == "push":
         return check_push(args, cwd, ctx)
+    if sub in ("switch", "checkout"):
+        return check_checkout(args, cwd)
     if sub in ("filter-branch", "filter-repo"):
         return DENY, "rewriting history (filter-branch/filter-repo) is never allowed"
     if sub == "reset" and "--hard" in args:
@@ -257,9 +407,10 @@ def evaluate(command: str, cwd: str, ctx: Ctx, depth: int = 0):
     """Return (decision, reason) for the strictest finding, or None to allow."""
     if depth > 3:
         return None
+    command, extras = lift_heredocs(command)
     if SUBST_RE.search(_without_single_quoted(command)):
         return DENY, "a reserved git/terraform action inside command substitution"
-    found = []
+    found = [evaluate(e, cwd, ctx, depth + 1) for e in extras]
     for segment in split_segments(command):
         tokens = program_tokens(segment)
         if not tokens:

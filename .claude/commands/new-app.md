@@ -18,20 +18,23 @@ gaps):
 
 **3. Write the settings:** `.claude/TIER.md` (`TIER:`, the `@tiers/Ln.md` import, `Git policy:`,
 `PM mode:`, `Deploys on push:`); the Project block in `CLAUDE.md` (name, purpose, profile, vault
-note); `CURRENT.md`'s frontmatter to match. Apply the profile overlay. Private mode: set it up as
-in `/pm-upgrade` step 6. The tier's rules govern everything after this.
+note); `CURRENT.md`'s frontmatter to match. Apply the profile overlay (app has none: the
+template is the app profile), then run
+`python C:/Users/flow/CursorProjects/app-factory/tools/sync.py . --apply`, which records the
+files it dropped in `.claude/factory.json`. Private mode: set it up as in `/pm-upgrade` step 6.
+The tier's rules govern everything after this.
 
-**4. Draft the scope → `plans/PLAN.md`:** purpose, in scope, **explicitly out of scope** (be
-aggressive), design direction, domain assumptions to get from the user. Sign-off gate at every
-tier.
+**4. Draft the scope → `PLAN.md`, Purpose and scope:** purpose, in scope, **explicitly out of
+scope** (be aggressive), design direction, domain assumptions to get from the user. Sign-off
+gate at every tier.
 
 **5. Design tokens** (app and site profiles): palette (4–6 values), type pairing, spacing scale,
 justified against what the app is. Sign-off gate at every tier: design is always the user's.
 
-**6. Write the plans:** `ROADMAP.md` (phases with goals and done-conditions; Phase A ends at
-something runnable), `ARCHITECTURE.md` (stack and system shape), `DATABASE.md` (initial schema,
-if there's a database). Seed `FEATURE_REGISTER.md` from the scope. Open questions →
-`DECISIONS.md`; things only the user can do (repo settings, accounts) → `CHORES.md`.
+**6. Fill in the rest of `PLAN.md`:** Roadmap (phases with goals and done-conditions; Phase A
+ends at something runnable), Architecture (stack and system shape), Data model (initial schema;
+no database, no section). Seed `FEATURES.md` from the scope. Open questions → `DECISIONS.md`;
+things only the user can do (repo settings, accounts) → `CHORES.md`.
 
 **7. Commit** once `python verify.py` is green: under `main`, on main, then push; under `pr`, on
 `chore/new-app`, pushed with a PR. A repo with no remote yet: commit locally and add a chore for

@@ -6,8 +6,10 @@ Runs every check that applies and skips (without failing) whatever isn't set up 
   Hooks     pytest .claude/hooks: the git guard's behaviour matrix
   Backend   ruff format --check, ruff check, pytest
   Frontend  npm run lint / typecheck / test, when package.json defines them
-Python checks and ruff use the repo's .venv when there is one. Exit 0 = every check that ran
-passed; anything else = fix it (or register it) before wrapping, pushing, or opening a PR.
+Python checks and ruff use the repo's .venv when there is one; ruff that is configured but
+can't be found fails rather than skips. In a linked worktree of a private-mode repo, pm_check
+reads the main folder's project-management/. Exit 0 = every check that ran passed; anything
+else = fix it (or register it) before wrapping, pushing, or opening a PR.
 """
 import json
 import shutil
@@ -46,6 +48,16 @@ def has_pytest():
     return subprocess.run([PY, "-c", "import pytest"], capture_output=True).returncode == 0
 
 
+def ruff_configured(*folders):
+    for d in folders:
+        if (d / "ruff.toml").exists() or (d / ".ruff.toml").exists():
+            return True
+        pyproject = d / "pyproject.toml"
+        if pyproject.exists() and "[tool.ruff" in pyproject.read_text(encoding="utf-8"):
+            return True
+    return False
+
+
 def factory():
     ok = True
     checker = ROOT / ".claude/skills/cleanup/pm_check.py"
@@ -72,6 +84,9 @@ def backend():
     if RUFF:
         ok &= run("ruff format --check", [RUFF, "format", "--check", "."], be)
         ok &= run("ruff check", [RUFF, "check", "."], be)
+    elif ruff_configured(be, ROOT):
+        results.append(("ruff", "FAIL (configured, but not in .venv or on PATH)"))
+        ok = False
     else:
         skip("ruff", "not installed")
     has_tests = any(be.rglob("test_*.py")) or any(be.rglob("*_test.py")) or (be / "tests").exists()

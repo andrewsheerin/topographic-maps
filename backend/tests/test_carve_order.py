@@ -4,7 +4,7 @@ buffered roads overlap, the *deepest* carve should win (not accumulate).
 NOTE: this asserts the intended contract with a reference implementation. The
 current `core.mesh.carve_roads` subtracts depths cumulatively at overlaps, which
 does NOT satisfy this rule — tracked as an open decision (see
-project-management/DECISIONS.md, D-2 / FEATURE_REGISTER F-2). Runs without any
+project-management/DECISIONS.md, D-2 / FEATURES.md F-2). Runs without any
 network calls."""
 
 import numpy as np

@@ -15,11 +15,11 @@ keep those four small and in the shapes below. `pm_check.py` (run by `verify.py`
 | File | Holds | Limit |
 | --- | --- | --- |
 | `CURRENT.md` | Frontmatter + where things stand | ≤ 20 lines below the frontmatter |
-| `FEATURE_REGISTER.md` | Every feature, fix, bug, refactor, idea | One table, one line per row |
+| `FEATURES.md` | The register: every feature, fix, bug, refactor, idea | One table, one line per row |
 | `DECISIONS.md` | Needs you · Resolved · Decision Log | Needs you holds only OPEN and PROPOSED |
-| `CHORES.md` | Tasks only the user can do | One table; DONE rows move to the archive at /cleanup |
-| `plans/` | PLAN, ROADMAP, ARCHITECTURE, DATABASE | Living; DATABASE changes in the same commit as the schema |
-| `reports/sessions/` | `YYYY-MM-DD-HHMM[-slug].md`, clock time from `date` | Ends with `## Next session prompt` |
+| `CHORES.md` | Tasks only the user can do | One table; DONE and DROPPED rows move to the archive at /cleanup |
+| `PLAN.md` | Purpose and scope · Roadmap · Architecture · Data model | About 500 lines, a soft target; the data model changes in the same commit as the schema |
+| `reports/sessions/` | `YYYY-MM-DD-HHMM[-slug].md`, clock time from `date`; one per session | Ends with `## Next session prompt`; optional `## Factory feedback` before it |
 | `reports/phases/` | `phase-<X>[-slug].md` | One per phase |
 | `reports/topics/` | `YYYY-MM-DD-topic.md`: research, reviews, audits, migrations | — |
 | `archive/` | Answered decisions, done chores, anything moved aside | Never deleted |
@@ -54,13 +54,22 @@ mid-task. A session in a linked worktree leaves CURRENT.md to the main-folder se
   Deferred work is PLANNED with Phase `later`.
 - Decisions: `OPEN` (the user decides; work waits), `PROPOSED` (Claude built on a provisional
   choice; the user confirms or corrects), `RESOLVED`, `SUPERSEDED`.
-- Chores: `TODO`, `DONE`.
+- Chores: `TODO`, `DONE`, `DROPPED` (no longer needed; the reason in Notes).
 
-## FEATURE_REGISTER.md
+## FEATURES.md, the register
 
 `| ID | Item | Type | Phase | Status | Ref | Notes |`. Type ∈ feature · fix · bug · refactor ·
-idea. `Ref` is filled at DONE: commit hash(es), a PR (`#42`) or a file. If losing a thought would
-cost something, it gets a row the moment it comes up.
+test · chore · idea. `Ref` is filled at DONE: commit hash(es), a PR (`#42`) or a file. If
+losing a thought would cost something, it gets a row the moment it comes up. Phase names a
+phase in PLAN.md's Roadmap, or `later`.
+
+## PLAN.md
+
+Four sections: Purpose and scope (with what's explicitly out of scope), Roadmap (phases with a
+goal, a done-when and their F-n), Architecture (as built), Data model (engine, schema, schema
+changes; it changes in the same commit as the schema). Profiles drop the sections they don't
+need. About 500 lines is the target, not a cap: detail that can live with the code goes there,
+linked, and a plan for a single feature is a topic report.
 
 ## DECISIONS.md
 
@@ -88,4 +97,4 @@ in a report or a `### C-n` block, linked from the row.
 `project-management/` is its own git repo, excluded from the host through `.git/info/exclude`.
 Commit PM changes inside it (`git -C project-management commit …`); its own main may be pushed to
 its private remote under either git policy. Worktrees of the host don't contain it: write to the
-main folder's `project-management/` (find it with `git rev-parse --git-common-dir`).
+main folder's `project-management/`, which the session-start print names (`PM files: <path>`).

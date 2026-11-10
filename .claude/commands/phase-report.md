@@ -11,7 +11,7 @@ Close the current phase.
    code, duplicated components, off-token CSS, files past the review-trigger sizes, TODO
    comments, anything built above the tier. Fix trivial finds, register the rest, and report
    what you found either way.
-3. **Prune the living docs:** register statuses and Refs current; `ROADMAP.md` actual vs
-   planned; `ARCHITECTURE.md` and `DATABASE.md` still true; answered decisions archived.
+3. **Prune the living docs:** register statuses and Refs current; PLAN.md's Roadmap actual vs
+   planned, its Architecture and Data model still true; answered decisions archived.
 4. **Next phase:** L1 — announce it in `CURRENT.md` and continue. L2/L3 — present the plan
    and stop.

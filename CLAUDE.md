@@ -31,7 +31,7 @@
 - **`pr` policy:** one branch per register item (`feat/F-12-slug`, `fix/F-31-slug`). Push it and
   open a PR whose body carries the verify results. The user merges, because merging deploys.
   Never push to main, never merge a PR. Afterwards, put the main folder back on main.
-- **`Deploys on push: yes`:** say so and ask before every push to main.
+- **`Deploys on push: yes`** (a live site): never push main; commit, then hand the user the push.
 - **Always:** no force-push, no rewriting pushed history, no deleting unmerged work.
   Commits read `<type>(F-n): summary`, type ∈ feat · fix · refactor · docs · chore · test.
 - Two things at once in this repo → a worktree under `.claude/worktrees/`, removed once merged.
@@ -67,10 +67,9 @@ needs a workaround says so, and the real problem gets a register row.
 | Need | File |
 | --- | --- |
 | Where things stand (printed at session start) | `project-management/CURRENT.md` |
-| Every feature, fix, bug and idea | `project-management/FEATURE_REGISTER.md` |
+| Every feature, fix, bug and idea (the register) | `project-management/FEATURES.md` |
 | Decisions: the user's, resolved, and Claude's log | `project-management/DECISIONS.md` |
 | Chores only the user can do | `project-management/CHORES.md` |
-| Plan, roadmap, architecture, database | `project-management/plans/` |
-| PM files from a linked worktree (private mode: the main folder only) | `$(git rev-parse --path-format=absolute --git-common-dir)/../project-management/` |
+| Scope, roadmap, architecture, data model | `project-management/PLAN.md` |
 | PM rules, git guide, code standards | `.claude/rules/` |
 | Health check, code and PM | `python verify.py` |

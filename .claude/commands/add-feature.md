@@ -7,7 +7,7 @@ $ARGUMENTS is the feature (or take it from the conversation).
 
 1. **Restate it in one sentence.** Features are always the user's call, at every tier; ask now
    if it's ambiguous.
-2. **Register it:** the next `F-n` row in `FEATURE_REGISTER.md` (Item, Type, Phase, PLANNED).
+2. **Register it:** the next `F-n` row in `FEATURES.md` (Item, Type, Phase, PLANNED).
    If it belongs later, Phase `later`, and ask whether to pull it forward.
 3. **Blast radius:** which files change, and whether it touches schema, design tokens,
    architecture, a dependency, auth or domain logic. Route those per the tier (L1 mostly
@@ -23,6 +23,6 @@ $ARGUMENTS is the feature (or take it from the conversation).
 6. **Ship it** per the policy: `main` → merge any branch, verify, push main. `pr` → push the
    branch, open the PR (body: what changed, F-n, verify summary), main folder back on main.
 
-**Done means:** DONE with `Ref` filled (hash, or `#PR` under `pr`), `DATABASE.md` updated if the
-schema moved, no dead code, no off-token CSS, no dependency that skipped its gate, and
+**Done means:** DONE with `Ref` filled (hash, or `#PR` under `pr`), PLAN.md's Data model updated
+if the schema moved, no dead code, no off-token CSS, no dependency that skipped its gate, and
 `python verify.py` green (or its reds registered).

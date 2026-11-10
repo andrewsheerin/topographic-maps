@@ -21,8 +21,13 @@ follow it. The repo's policy is the `Git policy:` line in `.claude/TIER.md`, and
 | Merge | Claude, locally, then push main | the user merges the PR |
 | Claude never | force-pushes, rewrites pushed history | pushes to main, commits or merges on main, merges a PR |
 
-`Deploys on push: yes` (for example fathomsolutions) adds one rule under `main`: say that the
-push deploys, and ask before every push to main. The guard asks too.
+Under `main` Claude pushes main itself once verify passes; `settings.json` allows
+`git push origin main` so it doesn't stop to ask. `Deploys on push: yes` (a live site, for
+example fathomsolutions) is the exception: pushing main deploys, so the user pushes. Claude
+commits, then hands over `! git push origin main`; the guard denies Claude's own push. In
+those repos and under `pr`, `settings.json` lists the same push commands under `deny`, not
+`allow`: a second lock that holds even if the guard doesn't run. Pushes are allowed per repo,
+never in user-level settings.
 
 ## Which one to use
 
@@ -85,15 +90,47 @@ Rules:
 - Git refuses to check out one branch in two worktrees; give each its own.
 - A worktree session doesn't rewrite `CURRENT.md`; the main-folder session owns it. It writes its
   own session report and register rows.
-- In private PM mode the worktree has no `project-management/`: write to the main folder's.
+- In private PM mode the worktree has no `project-management/`: write to the main folder's,
+  whose path the session-start print gives (`PM files: <path>`). Never create a nested repo
+  inside a worktree: `git worktree remove` deletes ignored files without asking.
 - The stash is shared by every worktree, so park work in a WIP commit instead.
+
+## Private PM mode: branches from before the conversion
+
+In private mode the main folder holds `project-management/` as its own repo, and git treats that
+ignored folder as expendable. A branch made before the conversion still tracks the folder:
+checking it out in the main folder overwrites the PM files without a word, and switching back
+deletes them. Committed PM content can be restored from the nested repo; uncommitted edits are
+gone. pm_check names these branches (`pm-old-branch`) and the guard asks before such a switch.
+
+Open such a branch only in a worktree, and merge main into it there:
+
+```
+git worktree add .claude/worktrees/F-9-slug feat/F-9-slug
+cd .claude/worktrees/F-9-slug
+git diff $(git merge-base HEAD main) HEAD -- project-management > <patch outside the repo>
+git merge main
+```
+
+- No PM edits on the branch: the merge is clean and removes the worktree's PM copy.
+- PM edits: git reports a modify/delete conflict for each. Apply the patch to the main folder's
+  nested repo (`git -C <main folder>/project-management apply -p2 <patch>`) and commit it there,
+  then take main's side in the worktree (`git rm -r project-management`; it removes only the
+  worktree's copy) and `git commit`.
+
+After that the branch no longer tracks the folder and is safe anywhere. Under `pr`, push it;
+the PR picks up the merge.
 
 ## What the guard enforces
 
 Denied under both policies: force-push, `push --all/--mirror`, history rewrites, `gh pr merge`,
 `terraform apply/destroy/import`, publishing and deploy commands. Denied under `pr`: pushing
-to main, committing or merging on main (`merge --ff-only` is fine). The user is asked first
-for: `reset --hard`, `clean -f`, `branch -D`, `worktree remove --force`, deleting a remote
-branch, adding or changing a remote, `gh repo create`, `stash clear`, and pushing main when
-`Deploys on push: yes`. If a blocked action is genuinely needed, prepare it and hand the
-command to the user; never route around the guard.
+to main, committing or merging on main (`merge --ff-only` is fine). Denied under `main` with
+`Deploys on push: yes`: pushing main. The user is asked first for: `reset --hard`,
+`clean -f`, `branch -D`, `worktree remove --force`, deleting a remote branch, adding or
+changing a remote, `gh repo create`, `stash clear`, and, in private mode, checking out a
+branch that still tracks
+`project-management/` in the main folder. Text in single quotes, heredocs and PowerShell
+here-strings (a commit message) is data, unless it is fed to a shell or expands a `$( )`. If a
+blocked action is genuinely needed, prepare it and hand the command to the user; never route
+around the guard.
