@@ -7,7 +7,7 @@ Run 2026-11-09 from 20:01, interactively with Andrew, following
 
 ## Checklist
 
-- [x] 0 preconditions   - [ ] 3 settings confirmed   - [ ] 6 private mode (or n/a)
+- [x] 0 preconditions   - [x] 3 settings confirmed   - [ ] 6 private mode (or n/a)
 - [x] 1 layout found    - [ ] 4 .claude installed    - [ ] 7 verified, reported, pushed
 - [x] 2 code deps       - [ ] 5 content mapped
 
@@ -61,3 +61,14 @@ TIER.md needs no `pm_check ignore:` line. Mentions only, in comments and docs:
 - `F-n` IDs in code comments and test docstrings across `backend/` and `frontend/`: IDs are kept,
   so they stay valid.
 - `README.md` (lines 80, 81, 84) and `CLAUDE.md`: handled in step 4.
+
+## 3. Settings, confirmed by Andrew 2026-11-09 (one batched question)
+
+| Setting | Value | Basis |
+| --- | --- | --- |
+| Profile | app | STANDARD.md repo table; the template is the app profile (no overlay file) |
+| Git policy | `main` | STANDARD.md repo table |
+| PM mode | `private` | STANDARD.md; the GitHub repo is public. Set up in step 6 — TIER.md says `committed` until then (see step 4) |
+| Deploys on push | no | `infra/` holds only `.gitkeep`; no `.github/`, Dockerfile or deploy config in the repo |
+| Vault note | `C:/Users/flow/Vault/20 Projects/Topographic Maps.md` | exists |
+| Tier | L1, unchanged | |
