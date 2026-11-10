@@ -1,79 +1,75 @@
 # CLAUDE.md
 
-> In context every turn. Keep it under ~120 lines. Detail lives in `.claude/rules/`.
+> Always in context, so it stays under ~80 lines. Detail lives in `.claude/rules/` (each file
+> loads only when you touch the files it covers) and in the slash commands.
 
 ## Project
 
 - **Name:** TOPO2STL (topographic-maps)
-- **One-line purpose:** Draw or upload an area, pull a DEM (+ optional OSM roads), and export a 3D-printable
-  terrain STL. Runs locally for the author.
-- **Tier:** see `.claude/TIER.md` — **read it at session start and load the matching
-  `.claude/rules/tier-*.md`. The tier is the ruleset. It sets both your autonomy and the
-  engineering rigor.** Switch tiers only via `/set-tier`.
-- **Stack:** React (frontend) + FastAPI (backend). Deviations follow the tier's decision rules.
+- **Purpose:** Draw or upload an area, pull a DEM (+ optional OSM roads), and export a
+  3D-printable terrain STL. Runs locally for the author.
+- **Profile:** app · **Stack:** React (frontend) + FastAPI (backend)
+- **Vault note:** C:/Users/flow/Vault/20 Projects/Topographic Maps.md
+- Not a Tawa repo: Tawa workflow rules (issues, self-merge, releases) don't apply here.
 
-## Non-negotiables (every tier, no exceptions)
+@.claude/TIER.md
 
-1. **Git.** Work on a **feature branch per register item** (`feat/F-12-short-slug`,
-   `fix/F-31-…`), never directly on `main`. `git add`, `git commit`, and branch creation freely;
-   **never** `git push`, `git merge`, `git rebase`, or force anything — the user does all pushing
-   and merging. (Enforced by hook.) Commits: `<type>(F-n): summary` with type ∈ feat · fix ·
-   refactor · docs · chore · test; drop the `(F-n)` only when no register item applies.
-2. **Terraform.** Never `apply`, `destroy`, or `import` without explicit per-instance permission.
-3. **Browser automation** only with explicit permission.
-4. **No secrets in the repo.** Ever.
-5. **Science.** Every scientific or domain assumption — units, factors, formulas, defaults,
-   statistical treatment — belongs to the user (PhD, environmental engineering). Propose and
-   recommend; never choose. See `.claude/rules/science-integrity.md`.
-6. **Destructive data operations** (dropping tables, deleting user data, irreversible migrations)
-   always need explicit permission.
-7. If a permission you lack would make the work meaningfully faster or better, **say so and ask** —
-   don't silently work around it.
+## Lean by default
 
-## The decision router
+- **Trivial prompts** (questions, lookups, explanations, one-line fixes): just answer or fix.
+  Touch no PM file, run no verify, write no report.
+- **During work**, capture only what would otherwise be lost: one register row (IDEA is enough)
+  or a `D-n` stub (the question, status OPEN). Don't rewrite CURRENT.md or tidy docs mid-task.
+- **`/wrap-session`** is the routine bookkeeping point, a couple of minutes. **`/cleanup`** is
+  the deep pass, run when asked.
+- Open a rules file or plan doc only when the task needs it.
 
-Every non-trivial decision gets routed, and **the tier sets the threshold** for which lane it takes:
+## Git — the policy is in TIER.md; the full guide is `.claude/rules/git.md`
 
-- **Decide, log, keep moving** → one line in the Decision Log at the bottom of
-  `project-management/DECISIONS.md`.
-- **Stop and ask** → full entry (options + recommendation) in `DECISIONS.md`, then continue on
-  whatever doesn't depend on it.
+- **`main` policy:** commit on main; push main once `python verify.py` passes. Branch only for
+  risky or multi-session work, merge it locally, then push.
+- **`pr` policy:** one branch per register item (`feat/F-12-slug`, `fix/F-31-slug`). Push it and
+  open a PR whose body carries the verify results. The user merges, because merging deploys.
+  Never push to main, never merge a PR. Afterwards, put the main folder back on main.
+- **`Deploys on push: yes`:** say so and ask before every push to main.
+- **Always:** no force-push, no rewriting pushed history, no deleting unmerged work.
+  Commits read `<type>(F-n): summary`, type ∈ feat · fix · refactor · docs · chore · test.
+- Two things at once in this repo → a worktree under `.claude/worktrees/`, removed once merged.
 
-Where the threshold sits per tier — L1: almost everything is decide-and-log; stop only for the
-non-negotiables above, design direction, and adding/cutting features. L2: the reversibility test —
-anything with real reversal cost (architecture, dependencies, schema) stops. L3: architecture,
-dependencies, schema, auth, infra, and anything touching production data all stop. The tier file
-is the authority.
+`.claude/hooks/guard_commands.py` enforces the hard parts.
 
-**Phase boundaries follow the same pattern** — L1: announce the phase plan and proceed. L2/L3:
-present it and wait.
+## Non-negotiables (every tier)
 
-## Session protocol
+1. **Terraform:** never `apply`, `destroy` or `import` without explicit per-instance permission.
+2. **Browser automation** only with explicit permission.
+3. **No secrets in the repo.** Ever.
+4. **Science.** Units, factors, formulas, defaults and statistical treatment belong to the user
+   (PhD, environmental engineering). Propose and recommend; never choose.
+   See `.claude/rules/science-integrity.md`.
+5. **Destructive data operations** (dropping tables, deleting user data, irreversible
+   migrations) need explicit permission.
+6. If a permission you lack would make the work meaningfully faster or better, say so and ask.
 
-1. Read `project-management/CURRENT.md`. It says where things stand.
-2. Work. Keep `CURRENT.md` updated as you go — scratchpad, not report.
-3. Route decisions per the tier. Log chores to `CHORES.md` and feature ideas to
-   `FEATURE_REGISTER.md` **the moment they come up**, then return to the task.
-4. Before wrapping, run `python verify.py` and fix failures.
-5. End with `/wrap-session` → session report + reset `CURRENT.md`.
+## Decisions — the tier sets which lane
+
+- **Decide and log:** one line in the Decision Log at the bottom of `DECISIONS.md`.
+- **Stop and ask:** a `D-n` under Needs you, status OPEN, with options and a recommendation.
+  Carry on with whatever doesn't depend on it.
+- **Built on a provisional choice that's the user's to make:** a `D-n` with status PROPOSED.
 
 ## Code posture
 
-Minimal, not clever. The enemy is sprawl: defensive layers, speculative abstractions,
-workaround-on-workaround. Prefer deleting to adding. No dead code or commented-out blocks left
-behind. If a fix requires a workaround, say so and log the underlying issue in the register.
+Minimal, not clever. Prefer deleting to adding. No dead code, no speculative layers. A fix that
+needs a workaround says so, and the real problem gets a register row.
 
 ## Where things live
 
 | Need | File |
 | --- | --- |
-| Ruleset for this project | `.claude/TIER.md` → `.claude/rules/tier-*.md` |
-| PM system rules | `.claude/rules/project-management.md` |
-| Status right now | `project-management/CURRENT.md` |
-| All features/fixes/bugs + status + commit | `project-management/FEATURE_REGISTER.md` |
-| Decisions (user's + the log) | `project-management/DECISIONS.md` |
-| User's manual chores | `project-management/CHORES.md` |
-| Plan / roadmap / architecture / database | `project-management/plans/` |
-| Frontend, backend, science conventions | `.claude/rules/*.md` |
-
-Read a rules file when the work touches it. Don't preload all of them.
+| Where things stand (printed at session start) | `project-management/CURRENT.md` |
+| Every feature, fix, bug and idea | `project-management/FEATURE_REGISTER.md` |
+| Decisions: the user's, resolved, and Claude's log | `project-management/DECISIONS.md` |
+| Chores only the user can do | `project-management/CHORES.md` |
+| Plan, roadmap, architecture, database | `project-management/plans/` |
+| PM rules, git guide, code standards | `.claude/rules/` |
+| Health check, code and PM | `python verify.py` |

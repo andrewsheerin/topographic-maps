@@ -2,25 +2,21 @@
 
 **TIER: L1**
 
-The tier is the whole ruleset — it sets Claude's autonomy AND the engineering rigor. One line
-above; switch it with `/set-tier` (which walks the implications) rather than editing by hand.
+Git policy: main
+PM mode: committed
+Deploys on push: no
 
-| Tier | Autonomy | Rigor | Typical use |
-| --- | --- | --- | --- |
-| **L1** | Highest — builds phase after phase without waiting; interviews you for design and features, decides the rest and logs it | Lean. Local-only posture, anti-overbuild | Starting a passion project from scratch |
-| **L2** | Middle — phase plans wait for sign-off; decisions with real reversal cost stop | Beta. Pre-deployment hardening | Refining an app that still needs real progress |
-| **L3** | Careful — architecture, schema, deps, auth, infra, prod data all stop for you | Production | Deployed apps that matter |
+The tier sets autonomy and rigor together; its ruleset is imported below. The git policy and
+`Deploys on push` are read by `.claude/hooks/guard_commands.py`. Change any of these with
+`/set-tier`, and the PM mode with `/pm-upgrade` — never by hand (CURRENT.md mirrors them).
 
-Rough mapping: L1 = build it. L2 = get it ready. L3 = don't break it.
-
-**Switching is expected**, not exceptional — a passion project graduates L1 → L2 → L3.
-Upgrading adds a hardening phase to the roadmap (auth, secrets, tests, CI gaps); `/set-tier`
-proposes it. Downgrading an app that's already deployed doesn't remove the care its users need —
-that's why L3 → anything requires a conscious conversation.
+@tiers/L1.md
 
 ## Exceptions
 
-Per-axis overrides, one line each, agreed with the user and logged in the Decision Log.
-This is the escape hatch, not a second dial — if this list grows past ~3 lines, the tier is wrong.
+Per-axis overrides, one line each, agreed with the user and logged in the Decision Log. This is
+the escape hatch, not a second dial: past ~3 lines the tier is wrong. `pm_check ignore:` lines
+mark files that code depends on, so the PM checker leaves them alone.
 
-<!-- Example:  L3, but decide-and-log autonomy for isolated UI work in frontend/src/components/ -->
+<!-- - L3, but decide-and-log autonomy for isolated UI work in frontend/src/components/ -->
+<!-- - pm_check ignore: project-management/reports/*_data-quality.md (written by src/cli.py) -->

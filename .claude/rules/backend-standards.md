@@ -1,3 +1,8 @@
+---
+paths:
+  - "backend/**"
+---
+
 # Backend standards
 
 FastAPI + Python. Same posture as everywhere else: minimal, explicit, no speculative structure.

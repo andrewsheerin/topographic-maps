@@ -1,3 +1,12 @@
+---
+paths:
+  - "backend/core/**"
+  - "backend/constants.py"
+  - "data/**"
+  - "notebooks/**"
+  - "**/*.ipynb"
+---
+
 # Scientific and domain integrity
 
 The user is a PhD environmental engineer. **Scientific correctness is theirs, not yours.**

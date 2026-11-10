@@ -8,7 +8,7 @@ Run 2026-11-09 from 20:01, interactively with Andrew, following
 ## Checklist
 
 - [x] 0 preconditions   - [x] 3 settings confirmed   - [ ] 6 private mode (or n/a)
-- [x] 1 layout found    - [ ] 4 .claude installed    - [ ] 7 verified, reported, pushed
+- [x] 1 layout found    - [x] 4 .claude installed    - [ ] 7 verified, reported, pushed
 - [x] 2 code deps       - [ ] 5 content mapped
 
 ## 0. Preconditions
@@ -72,3 +72,46 @@ TIER.md needs no `pm_check ignore:` line. Mentions only, in comments and docs:
 | Deploys on push | no | `infra/` holds only `.gitkeep`; no `.github/`, Dockerfile or deploy config in the repo |
 | Vault note | `C:/Users/flow/Vault/20 Projects/Topographic Maps.md` | exists |
 | Tier | L1, unchanged | |
+
+## 4. The v3 `.claude`, installed
+
+Every `.claude` file in the repo was an unmodified copy of the v2.1 template (diffed ignoring
+line endings), so the v3 versions replace them; nothing repo-specific needed merging.
+
+- **Copied from the template:** `hooks/` (guard, guard tests, formatter, `session_start.py`),
+  all seven `commands/` (adds `pm-upgrade.md`), `skills/cleanup/` (SKILL.md, pm_check.py), the
+  rules `git.md`, `project-management.md`, `testing.md`, `security.md`, and the template's
+  `backend-standards.md`, `frontend-standards.md`, `science-integrity.md` (identical to the
+  repo's apart from the new `paths:` frontmatter). `skills/.gitkeep` removed.
+- **Tiers:** `rules/tier-L{1,2,3}.md` moved with `git mv` to `tiers/L{1,2,3}.md`, then given the
+  v3 text.
+- **`settings.json`, merged:** dropped the `git push:*` and `git merge:*` denies (the `main`
+  policy contradicts them); kept `git rebase:*` and the `rm -rf` / `docker` asks; the repo's
+  `terraform …:*` denies folded into the template's broader `terraform …*` ones; added the
+  template's force-push, history-rewrite, `gh pr merge` and `.env`/tfstate read denies. Hooks
+  switched from absolute paths (F-12's fix for a cwd-relative path that wedged a session) to
+  `$CLAUDE_PROJECT_DIR`, which solves the same problem and also works from a worktree. The
+  SessionStart hook no longer prints TIER.md: CLAUDE.md imports it now.
+- **`verify.py`:** the template's (adds pm_check and the hook tests). One change kept beyond the
+  template: ruff is taken from `.venv` like Python is. The template looks ruff up only on PATH,
+  and ruff here exists only in `.venv/Scripts`, so it was silently skipped — which is how
+  F-38's reds went unnoticed.
+- **`TIER.md`:** v3 shape: L1, `Git policy: main`, `Deploys on push: no`, `@tiers/L1.md`, no
+  exceptions (there were none). **`PM mode: committed` for now:** pm_check errors on `private`
+  until the nested repo exists, so writing the final value here would keep verify red through
+  step 5. Step 6 flips it.
+- **`CLAUDE.md`:** the template's shape, 74 lines, Project block filled (name and purpose kept
+  verbatim), vault-note and "Not a Tawa repo" lines. Nothing project-specific was left over, so
+  no `.claude/rules/project.md`. Old rules replaced:
+  - "Feature branch per register item, never directly on main" → `main` policy.
+  - "Never git push, git merge, git rebase — the user does all pushing and merging (enforced by
+    hook)" → Claude merges locally and pushes main after verify.
+  - "Keep CURRENT.md updated as you go" → lean by default; CURRENT is rewritten at wrap.
+  - The per-tier decision-router thresholds → the Decisions section plus `tiers/L1.md`.
+- **`.gitignore`:** added `.claude/worktrees/` (the worktree test needs it; the template has it).
+- **`.gitattributes`:** left alone. It exists (LFS rules for shapefiles, rasters, STL, ZIP; no
+  LFS files are tracked), so "add if missing" doesn't apply. The index is LF throughout
+  (`core.autocrlf=true`), so `eol=lf` would renormalize nothing.
+- **Profile overlay:** none; the template is the app profile.
+- **Checked:** guard tests 90/90; the guard allows `merge` and `push origin main` under this
+  TIER.md and denies force-push.
