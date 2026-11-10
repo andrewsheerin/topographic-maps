@@ -71,5 +71,6 @@ needs a workaround says so, and the real problem gets a register row.
 | Decisions: the user's, resolved, and Claude's log | `project-management/DECISIONS.md` |
 | Chores only the user can do | `project-management/CHORES.md` |
 | Plan, roadmap, architecture, database | `project-management/plans/` |
+| PM files from a linked worktree (private mode: the main folder only) | `$(git rev-parse --path-format=absolute --git-common-dir)/../project-management/` |
 | PM rules, git guide, code standards | `.claude/rules/` |
 | Health check, code and PM | `python verify.py` |

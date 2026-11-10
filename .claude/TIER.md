@@ -3,7 +3,7 @@
 **TIER: L1**
 
 Git policy: main
-PM mode: committed
+PM mode: private
 Deploys on push: no
 
 The tier sets autonomy and rigor together; its ruleset is imported below. The git policy and
