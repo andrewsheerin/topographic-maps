@@ -159,3 +159,14 @@ Empty v2.1 `## Dropped` table removed (v3 uses the DROPPED status in the one tab
 
 **pm_check after step 5:** 0 errors, 3 warnings (the old report's prompt heading; main folder on
 `chore/pm-upgrade`; main 34 ahead of origin).
+
+## After step 5: F-38 and the science-rule paths
+
+- **F-38**, fixed with Andrew's OK (`eee4250`): `ruff check --fix` + `ruff format`. The four
+  `core/` files have identical ASTs before and after; in tests, one import split in two and two
+  unused imports removed. pytest 66/66.
+- **`science-integrity.md` paths widened** (raised by a side agent, checked, adopted): the
+  template scopes the rule to `backend/core/**`, `backend/constants.py` and `data/**`, but this
+  app's print defaults also live in `frontend/src/` (Generator, the panel sections,
+  `lib/geometry.js`), `backend/models/schemas.py` and `backend/api/terrain.py`. Added
+  `frontend/src/**`, `backend/models/**`, `backend/api/**`. Logged in the Decision Log.

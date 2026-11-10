@@ -76,6 +76,8 @@ One line each — what makes autonomous tiers auditable. Newest first.
 
 | Date | Decision | Why |
 | --- | --- | --- |
+| 2026-11-09 | The science-integrity rule also loads for `frontend/src/**`, `backend/models/**` and `backend/api/**` (template: only `backend/core`, `constants.py`, `data`) | This app's print defaults live there: D-1's UI road widths, F-17's 2 mm base, F-34's auto-resolution target, the GPS-square math in `lib/geometry.js`, request defaults in `schemas.py` |
+| 2026-11-09 | `verify.py` runs ruff from `.venv` (template: PATH only) | ruff exists only in `.venv` here, so verify skipped lint and reported green over F-38 |
 | 2026-09-04 | ~~F-35 frame is uncolored, overlapping solid~~ Superseded same day: frame approach replaced by pre-mesh DEM clip (user clarified intent) | Clipping before meshing gets straight edges from the normal grid path — no second object, no boolean, less code |
 | 2026-09-04 | F-35 print scale computed after the clean-edge clip | Target max size applies to what actually prints, not the pre-clip extent |
 | 2026-09-04 | F-34 auto-resolution targets one cell ≈ at-or-below 0.42 mm (the F-28 extrusion constant): floor() when coarsening, ceil() when refining | Never coarser than the printer can render; the 0.42 anchor is already user-owned |

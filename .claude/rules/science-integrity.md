@@ -2,6 +2,9 @@
 paths:
   - "backend/core/**"
   - "backend/constants.py"
+  - "backend/models/**"
+  - "backend/api/**"
+  - "frontend/src/**"
   - "data/**"
   - "notebooks/**"
   - "**/*.ipynb"
