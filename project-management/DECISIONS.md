@@ -2,14 +2,12 @@
 
 ## Needs you
 
-Decisions only the user makes. Each entry must be answerable in 30 seconds — options and a
-recommendation are part of writing it, not a follow-up.
-
----
+Only OPEN and PROPOSED entries live here, newest last. Each must be answerable in 30 seconds.
+When one is answered: append its full text to `archive/DECISIONS-answered.md`, add a line under
+Resolved, and delete it here.
 
 ### D-1: Which per-class road-width defaults are canonical?
-**Status:** OPEN
-**Raised:** 2026-08-09 · **Blocks:** F-4
+**Status:** OPEN · **Raised:** 2026-08-09 · **Blocks:** F-4
 
 **Context:** Two disagreeing default sets exist. `backend/constants.py` `ROAD_WIDTHS_MM` has
 motorway 4.0 / trunk 3.0 / primary 2.0 / secondary 0.5 / tertiary 0.35 / residential 0.25 (mm).
@@ -29,11 +27,8 @@ yours.
 **Recommendation:** Pick one canonical set (I lean toward the UI values, since they're what you
 tune when printing) and make `constants` mirror it — but the actual millimetres are your call.
 
----
-
 ### D-2: How should overlapping road carves combine — deepest-wins or accumulate?
-**Status:** OPEN
-**Raised:** 2026-08-09 · **Blocks:** F-2
+**Status:** OPEN · **Raised:** 2026-08-09 · **Blocks:** F-2
 
 **Context:** `core/mesh.carve_roads` applies carves shallow→deep with `-=`. Where two road buffers
 overlap (e.g. a junction), both depths subtract, so the trench is the *sum*. The function's own
@@ -50,14 +45,30 @@ contract disagree. This is print geometry, so the rule is yours.
 **Recommendation:** Deepest-wins — it matches the documented intent and avoids accidental
 punch-through at intersections. But confirm, since it changes carved geometry.
 
----
+### D-5: Are the SRTM and NASADEM coverage bounds on the DEM labels right (60°N–56°S)?
+**Status:** PROPOSED · **Raised:** 2026-09-03 · **Blocks:** nothing
+
+**Chose (provisional):** the DEM dropdown labels give SRTM and NASADEM coverage as 60°N–56°S
+(F-7) · **Why:** so a point outside coverage isn't sent to a dataset that can't serve it ·
+**Reverse cost:** a label edit in the frontend. Coverage is provider metadata, so the bounds are
+yours to confirm. Was a 2026-09-03 Decision Log line, carried in CURRENT.md as "SRTM/NASADEM
+labels".
+
+### D-6: Should the Overpass User-Agent carry your contact email?
+**Status:** PROPOSED · **Raised:** 2026-09-03 · **Blocks:** nothing
+
+**Chose (provisional):** the User-Agent is `TOPO2STL/1.0 (personal terrain-print app)`, no email
+(F-24) · **Why:** OSM policy wants an identifying UA (overpass-api.de 406-blocks the requests
+default), and this keeps your email out of the repo, which is public · **Reverse cost:** a
+one-line constant. Was a 2026-09-03 Decision Log line, carried in CURRENT.md as "email in
+Overpass UA?".
 
 ## Resolved
 
-| ID | Decision | Chose | Date |
-| --- | --- | --- | --- |
-| — | Frontend framework for the rewrite | React + Vite (rewrite the vanilla-JS Leaflet app) | 2026-08-09 |
-| — | Scope of the migration session | Full migration in one session (factory + restructure + React) | 2026-08-09 |
+| ID | Decision | Status | Outcome | Date |
+| --- | --- | --- | --- | --- |
+| D-3 | Frontend framework for the rewrite | RESOLVED | React + Vite (rewrite the vanilla-JS Leaflet app); was unnumbered | 2026-08-09 |
+| D-4 | Scope of the migration session | RESOLVED | Full migration in one session (factory + restructure + React); was unnumbered | 2026-08-09 |
 
 ## Decision Log (made by Claude)
 

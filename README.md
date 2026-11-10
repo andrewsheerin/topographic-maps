@@ -78,10 +78,8 @@ backend/     FastAPI app — main.py, api/ (routers), core/ (DEM/roads/mesh/pipe
 frontend/    React + Vite app (Leaflet map, controls)
 data/        input/reference datasets (DATA_SOURCES.md logs provenance)
 project-management/   living plan, feature register, decisions, chores, reports
-.claude/     tier + rules + hooks + commands (see GUIDE.md)
+.claude/     tier + rules + hooks + commands (see CLAUDE.md)
 ```
-
-See `GUIDE.md` for how the project is run day to day.
 
 ## Notes / troubleshooting
 

@@ -1,3 +1,5 @@
+> Archived 2026-11-09 by /pm-upgrade from the repo root `GUIDE.md`: the app-factory v2.1 owner's guide, superseded by v3 (`C:/Users/flow/CursorProjects/app-factory/STANDARD.md`). Its git and merge rules no longer apply here.
+
 # App Factory — Owner's Guide (v2.1)
 
 Your reference for what this thing is and how to run it. Written for you — Claude's instructions

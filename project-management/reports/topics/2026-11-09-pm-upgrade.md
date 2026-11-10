@@ -9,7 +9,7 @@ Run 2026-11-09 from 20:01, interactively with Andrew, following
 
 - [x] 0 preconditions   - [x] 3 settings confirmed   - [ ] 6 private mode (or n/a)
 - [x] 1 layout found    - [x] 4 .claude installed    - [ ] 7 verified, reported, pushed
-- [x] 2 code deps       - [ ] 5 content mapped
+- [x] 2 code deps       - [x] 5 content mapped
 
 ## 0. Preconditions
 
@@ -100,7 +100,7 @@ line endings), so the v3 versions replace them; nothing repo-specific needed mer
   exceptions (there were none). **`PM mode: committed` for now:** pm_check errors on `private`
   until the nested repo exists, so writing the final value here would keep verify red through
   step 5. Step 6 flips it.
-- **`CLAUDE.md`:** the template's shape, 74 lines, Project block filled (name and purpose kept
+- **`CLAUDE.md`:** the template's shape, 75 lines, Project block filled (name and purpose kept
   verbatim), vault-note and "Not a Tawa repo" lines. Nothing project-specific was left over, so
   no `.claude/rules/project.md`. Old rules replaced:
   - "Feature branch per register item, never directly on main" → `main` policy.
@@ -115,3 +115,47 @@ line endings), so the v3 versions replace them; nothing repo-specific needed mer
 - **Profile overlay:** none; the template is the app profile.
 - **Checked:** guard tests 90/90; the guard allows `merge` and `push origin main` under this
   TIER.md and denies force-push.
+
+## 5. Content mapped
+
+**ID map** (old → new, in old order):
+
+| Old | New | Notes |
+| --- | --- | --- |
+| F-1…F-37 | unchanged | Rows byte-for-byte; `Commit(s)` renamed `Ref`; blank lines between rows removed |
+| — | F-38 (PLANNED) | New: the ruff reds found in step 4 |
+| D-1, D-2 (OPEN) | unchanged, OPEN | Status and Raised joined onto one line; text untouched |
+| `—` Frontend framework (Resolved) | D-3, RESOLVED | Original row → `archive/DECISIONS-answered.md` |
+| `—` Migration scope (Resolved) | D-4, RESOLVED | Same |
+| CURRENT "Blocked on: SRTM/NASADEM labels" | D-5, PROPOSED | From the 2026-09-03 Decision Log line; the log line stays as history |
+| CURRENT "Blocked on: email in Overpass UA?" | D-6, PROPOSED | Same |
+| C-1, C-2 (TODO) | unchanged, TODO | Due column added, blank. Closed by /cleanup, per the dispatch |
+
+**Moved to `archive/`:**
+
+- `GUIDE-v2.1.md` ← root `GUIDE.md` (`git mv`, header added): the v2.1 factory guide. v3 ships no
+  GUIDE and its rules (Andrew does all merging; branch protection as "the real wall") contradict
+  the `main` policy. README's two pointers to it now point at CLAUDE.md.
+- `DECISIONS-answered.md`: the two unnumbered Resolved rows, as their full text.
+
+**Rewritten:** `CURRENT.md`, with frontmatter; body 15 lines. Its old body was a snapshot, not a
+log, so no session report was needed for its history: the F-36 summary is in the register, the
+branch-stack note is obsolete (merged), and every "Blocked on: yours" item survives (D-1, D-2,
+D-5, D-6, the Killington print check; C-1 is in CHORES).
+
+**Small fixes:** `plans/PLAN.md` pointed at `.claude/rules/tier-L1.md` → `.claude/tiers/L1.md`.
+Empty v2.1 `## Dropped` table removed (v3 uses the DROPPED status in the one table).
+
+**Left as found:**
+
+- `reports/sessions/2026-08-09-2148.md` ends `## Opening prompt for next session`. Reports are
+  history, so it isn't edited; the warning clears once a newer report exists.
+- F-5 has Type `test`, outside v3's five types; pm_check doesn't check Type.
+- Other "confirm"/"flag" asks inside Decision Log and register Notes (F-17's 2 mm base default,
+  F-11's county subdivisions, the equirectangular square) were not promoted to D-n: only the two
+  CURRENT.md carried as open asks were. Candidates if Andrew wants them tracked.
+- `plans/` content (PLAN's in-scope list predates water, 3MF and F-18's buffer removal) — a
+  content refresh, not a migration step.
+
+**pm_check after step 5:** 0 errors, 3 warnings (the old report's prompt heading; main folder on
+`chore/pm-upgrade`; main 34 ahead of origin).

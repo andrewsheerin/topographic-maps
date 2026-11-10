@@ -1,11 +1,13 @@
 # Feature Register
 
-Every feature, fix, bug, refactor, and idea — including ones planned for later. If it was
-discussed, it has a row. Checkoff = Status DONE + the commit hash(es) that delivered it.
+Every feature, fix, bug, refactor and idea, including ones planned for later. If losing the
+thought would cost something, it gets a row the moment it comes up. Checkoff = DONE + Ref.
 
-Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. IDs never reused.
+Statuses: `IDEA → PLANNED → WIP → DONE`, plus `BLOCKED` and `DROPPED`. One WIP at a time.
+Deferred work is PLANNED with Phase `later`. IDs are never reused. One line per row; write a
+literal pipe as `\|`. Ref = commit hash(es), a PR (`#42`) or a file.
 
-| ID | Item | Type | Phase | Status | Commit(s) | Notes |
+| ID | Item | Type | Phase | Status | Ref | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | F-1 | Migrate to app-factory (L1): restructure into backend/ + frontend/, React rewrite, PM system | refactor | A | DONE | c4dda13 | Behaviour-preserving. verify.py green; server serves the built SPA. |
 | F-2 | Road carve overlaps accumulate depth instead of deepest-wins | bug | B | PLANNED | | `core/mesh.carve_roads` uses `-=`; contradicts its own docstring + `test_carve_order`. Blocked by D-2. |
@@ -30,34 +32,18 @@ Statuses: `IDEA → PLANNED → WIP → DONE` · `DROPPED`. One WIP at a time. I
 | F-21 | Squares: (a) lat/lon + side length form places a square centered on a GPS point; (b) square-constrained draw tool on the map | feature | C | DONE | da1ef87 | Square math haversine-checked (10 km → 9.98–10.00 km sides, exact center). Browser click-through pending user run — pair with a global dataset (F-7) for the Alberta point. |
 | F-22 | Water: per-lake flatten (10th-pct plane + recess) and stream carving via existing Overpass + carve machinery | feature | C | DONE | 6fe8c96 | Each lake gets its own plane (COP30 radar noise over water); streams print-mm, lake-protected. Order: lakes → streams → roads → mesh → base. Constants user-confirmed 2026-09-03 (0.6/1.0/0.4 mm). Water panel applies to all exports. Known gap: untagged natural=water bodies excluded (literal spec) — flag if lakes come out missing. |
 | F-23 | Colored 3MF export (second export; STL untouched): per-face color for Bambu AMS via 3MF Materials ext | feature | C | DONE | 983f8a2 | Hand-written zip+XML in core/threemf.py (no new dep). Priority: water (lake polys) → forest < treeline → rock < snowline → snow; treeline/snowline/4 colors required request params (no defaults). Tradeoff to revisit: streams/roads carved but NOT colored — coloring a stream network forces AMS filament swaps on most layers; lakes are compact in Z so they're fine. Base/walls print in the rock color. Bambu import pending user run. |
-
 | F-24 | Overpass fetch broken: overpass-api.de 406-blocks the default python-requests User-Agent; dead nchc endpoint (DNS gone) retried at full timeout; only the last endpoint's error surfaced | bug | C | DONE | 1c79ba7 | Root cause was the UA block — the app had been riding on fallback endpoints until they rotted. Fix: identifying User-Agent (OSM policy), drop nchc, fail fast on connection/timeout errors, report every endpoint's failure. Live-verified on the Alberta square: 6 lakes, 110 streams. |
-
 | F-25 | UI restructure: opt-in feature toggles ("Add roads" / "Add water" / "Add color") that reveal their inputs only when checked; Output moves to the bottom with three choices — STL, colored 3MF, full ZIP | feature | C | DONE | 05fe84d | User-requested 2026-09-03; all toggles default OFF so plain exports make zero Overpass calls. ZIP (user-confirmed): terrain_raw.stl + terrain_carved.stl + terrain.3mf (if color) + roads_utm.geojson / water_utm.geojson. 3MF disabled until color complete; ZIP disabled only when color is half-filled. |
-
 | F-26 | Overpass rate-limit hygiene: a 3MF click fired 3 queries back-to-back (lakes, streams, roads) and quick retries → 429s | fix | C | DONE | 44b24b1 | Found retesting F-24: water fetch succeeded, roads then 429'd. Lakes+streams merged into one query; 429 retries honor Retry-After (min 10 s). F-25's opt-in toggles remove the unwanted roads fetch itself. |
-
 | F-27 | Streams print in the water color in the 3MF (revisits the F-23 tradeoff) | fix | C | DONE | 47334f8 | User saw the Bambu preview 2026-09-03 and chose color despite the extra AMS swaps. Carved stream cells join the water class; lake-protection logic unchanged. |
-
 | F-28 | Stream rendering refinement: W-1 dem_upsample (1–4, bilinear), W-2 anti-aliased fractional-depth carve, W-3 V-profile cross-section, W-4 per-class widths (river/stream/brook), W-5 width floor guard | feature | C | DONE | f4289fa, 758bcd5 | User spec + values 2026-09-03. Bilinear upsampling invents no new terrain information — it only buys placement resolution for water features; it is the only fix for colored stream width (a triangle gets one color). AA fixes carve depth below one cell (depth is continuous). Floor clamps in backend (exact) + warns in UI (approx). |
 | F-29 | Strahler stream ordering for taper (more faithful than OSM waterway class) | idea | later | IDEA | | Candidate successor to F-28's W-4 per-class widths. Needs network topology from the fetched ways. |
 | F-30 | `read_dem` downsample=avg may smear the nodata value (e.g. −9999) into edge cells before the NaN mask is applied | bug | later | IDEA | | Spotted during F-28. Average-resampling happens in `src.read`, nodata→NaN conversion after — edge cells mixing valid+nodata become garbage. Likely tripped only with downsample>1 on clipped rasters. |
-
 | F-31 | "Named streams only" filter: waterway fetch keeps only ways with a `name` tag | feature | C | DONE | 7862164 | Chosen over intermittent-filter after tag census of the Alberta box (94 ways: all `stream`, 0 intermittent-tagged, 22 named) — named ≈ appears-on-a-paper-topo. Filtered in the Overpass query itself; live-verified 94→22. Checkbox defaults ON. Strahler (F-29) remains the principled successor. |
-
 | F-32 | Dynamic color bands: replace fixed water/forest/rock/snow + treeline/snowline with a user-defined list of elevation bands (up to X m → #hex, add/remove rows, no semantic names); water stays a mask-driven color slot; base/walls take the lowest band's color; cutoffs in absolute metres | feature | C | DONE | 3471c02, 27bbcc2 | User-requested 2026-09-04; water-slot/base-rule/metres confirmed by user. Palette = exactly the entered colors; bands auto-sort; strict-< boundaries preserved. Water slot ALWAYS present (user call mid-build): stable AMS slot 0, paints nothing when water off. Band cap 16. Browser click-through pending user run. |
-
 | F-33 | Ocean water: cells ≤ sea-level threshold flatten to a recessed plane and take the water color (no Overpass fetch — pure elevation) | feature | C | DONE | 727eefb | For coastal prints (Aquidneck Island / Narragansett Bay). Threshold 0.5 m user-confirmed 2026-09-04; plane = threshold − recess; streams protected from carving the bay. Known limitation: below-sea-level inland basins would classify as ocean. |
-
 | F-34 | Auto resolution: "Detail multiplier" renamed "Upsample factor"; downsample + upsample auto-default from area/dataset/print size to land cells near the 0.42 mm extrusion width (editable via an Auto toggle); cell-size + triangle-count readout | feature | C | DONE | c355ee8 | User-requested 2026-09-04 after a 15.7M-triangle Aquidneck 3MF (36 km box at 100 mm = 0.083 mm cells at 1×; multiplier 3 made it 9× worse). Auto is frontend-only — the backend still gets explicit factors, never resamples silently (F-28 rule). |
-
 | F-35 | Clean edges: "Straight edges" checkbox clips the terrain to the largest axis-aligned rectangle inscribed in its footprint before meshing — straight 90° edges instead of the stair-stepped UTM-reprojection margin | feature | C | DONE | a3031b2, e8f42ed, e04f222 | User-proposed 2026-09-04; first built as a separate frame solid (a3031b2), reworked same-day on user clarification: the frame was a cookie cutter, not a printed part. Clip applies to STL/3MF/ZIP; scale computed post-clip so target size = printed size. Trims the skew-wedge sliver of the drawn area. Frame-object code removed. |
-
 | F-36 | Clip dimensions: with Straight edges on, choose square or W×H rectangle + exact side lengths (mm); aspect-constrained inscribed-rect search, centered on the drawn area; dimensions govern print scale (Target max size ignored) | feature | C | DONE | 4a24efd | User-requested 2026-09-04 (wooden-frame mountain print). Square is cell-exact; custom W:H matches to ≤1 cell (~0.4 mm) — terrain is never stretched (aspect-preservation rule). Clip centers on the drawn-area centroid. |
-
 | F-37 | Target-size prints came out (n−1)/n short (100 mm → 99.65 mm): scale divided by raster pixel count, mesh spans pixel-center intervals | bug | C | DONE | 7904da2 | Found via user's Killington print (99.6503 × 99.3007 for a 100 target — exact signature). F-36 dims path already correct. Regression test asserts the long side hits the target exactly. |
-
-## Dropped
-
-| ID | Item | Why |
-| --- | --- | --- |
+| F-38 | Backend fails `ruff format --check` (8 files: core/mesh, pipeline, threemf, water + 4 tests) and `ruff check` (3 autofixable: unused imports and import order in tests) | fix | C | PLANNED | | Found 2026-11-09 in the v3 upgrade. Hidden since F-35…F-37 because verify.py only found ruff on PATH and it lives in `.venv`. Mechanical: `ruff format` + `ruff check --fix`, no behavior change. |
