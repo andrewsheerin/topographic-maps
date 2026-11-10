@@ -21,7 +21,8 @@ If CURRENT.md's frontmatter has `pm: v3`, skip the steps below and do this inste
    factory update is a risky change). In private PM mode, use a worktree on that branch
    (`.claude/worktrees/factory-<version>`; a dispatched session is already in one). Its PM
    checkout carries the PM changes on a PM branch that lands with the host branch, so neither
-   main's verify nor the vault sees a half-done update.
+   main's verify nor the vault sees a half-done update. Set the worktree up before verify runs
+   there (`.claude/rules/git.md`, "Setting up a worktree").
 3. Each changed file: diff it against `<factory>/template/<path>` and merge the factory's
    changes by hand, keeping the local ones. Say which you merged and which you left.
 4. With the user's OK, `python <factory>/tools/sync.py . --apply --merged <each file merged in

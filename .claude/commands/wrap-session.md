@@ -17,9 +17,10 @@ follow `.claude/rules/git.md` for this repo's policy (`.claude/TIER.md`).
    - **Vault intake:** if CLAUDE.md names a vault note, read that one note, read only. Each item
      in it that the PM files don't have yet goes in, Notes `from vault YYYY-MM-DD`: work items
      → register rows; tasks only the user can do → CHORES rows. Never edit the note.
-4. **Reset CURRENT.md** (skip in a linked worktree: the main-folder session owns it).
-   Frontmatter `updated` = today, plus `branch`, `phase`, `wip`, `blocked_on`; body ≤ 20 lines:
-   right now, blocked on, next.
+4. **Reset CURRENT.md.** Frontmatter `updated` = today, plus `branch`, `phase`, `wip`,
+   `blocked_on`; body ≤ 20 lines: right now, blocked on, next. On a branch or in a linked
+   worktree, write it as it should read once the branch has landed
+   (`.claude/rules/project-management.md`).
 5. **Report** to `project-management/reports/sessions/YYYY-MM-DD-HHMM.md`, the time taken from
    the system clock (`date +%Y-%m-%d-%H%M`, or `Get-Date -Format yyyy-MM-dd-HHmm`). If /cleanup
    already wrote this session's report, add today's other work to that one instead:

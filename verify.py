@@ -9,7 +9,9 @@ Runs every check that applies and skips (without failing) whatever isn't set up 
 Python checks and ruff use the repo's .venv when there is one; ruff that is configured but
 can't be found fails rather than skips. In a linked worktree of a private-mode repo, pm_check
 reads the worktree's own PM checkout, or the main folder's project-management/ when it has
-none. Exit 0 = every check that ran passed; anything
+none. A linked worktree that lacks a .venv or frontend/node_modules the main folder has fails
+those checks with a pointer to .claude/rules/git.md, "Setting up a worktree", instead of
+running them with the wrong tools. Exit 0 = every check that ran passed; anything
 else = fix it (or register it) before wrapping, pushing, or opening a PR.
 """
 import json
@@ -23,7 +25,29 @@ VENV = [ROOT / ".venv/Scripts/python.exe", ROOT / ".venv/bin/python"]
 PY = str(next((p for p in VENV if p.exists()), sys.executable))
 VENV_RUFF = [ROOT / ".venv/Scripts/ruff.exe", ROOT / ".venv/bin/ruff"]
 RUFF = next((str(p) for p in VENV_RUFF if p.exists()), shutil.which("ruff"))
+SETUP = '.claude/rules/git.md, "Setting up a worktree"'
 results = []
+
+
+def main_folder():
+    """The main folder when ROOT is a linked worktree (its .git is a file), else None."""
+    if not (ROOT / ".git").is_file():
+        return None
+    try:
+        p = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                           cwd=ROOT, capture_output=True, text=True)
+    except OSError:
+        return None
+    return Path(p.stdout.strip()).parent if p.returncode == 0 and p.stdout.strip() else None
+
+
+MAIN = main_folder()
+
+
+def not_set_up(folder):
+    """A linked worktree without its own copy of a folder the main folder has (.venv,
+    frontend/node_modules): the checks would run with the wrong tools, or none."""
+    return MAIN is not None and (MAIN / folder).is_dir() and not (ROOT / folder).is_dir()
 
 
 def run(name, args, cwd):
@@ -81,6 +105,9 @@ def backend():
     if not be.exists() or not any(be.rglob("*.py")):
         skip("backend", "no python files yet")
         return True
+    if not_set_up(".venv"):
+        results.append(("backend", f"FAIL (this worktree has no .venv; {SETUP})"))
+        return False
     ok = True
     if RUFF:
         ok &= run("ruff format --check", [RUFF, "format", "--check", "."], be)
@@ -104,13 +131,17 @@ def frontend():
     if not pkg.exists():
         skip("frontend", "no package.json yet")
         return True
+    scripts = json.loads(pkg.read_text(encoding="utf-8")).get("scripts", {})
+    checks = ("lint", "typecheck", "test")
+    if not_set_up("frontend/node_modules") and any(s in scripts for s in checks):
+        results.append(("frontend", f"FAIL (this worktree has no frontend/node_modules; {SETUP})"))
+        return False
     npm = shutil.which("npm")
     if not npm:
         skip("frontend", "npm not installed")
         return True
-    scripts = json.loads(pkg.read_text(encoding="utf-8")).get("scripts", {})
     ok = True
-    for s in ("lint", "typecheck", "test"):
+    for s in checks:
         if s in scripts:
             args = [npm, "run", s]
             if s == "test" and "vitest" in scripts["test"]:
