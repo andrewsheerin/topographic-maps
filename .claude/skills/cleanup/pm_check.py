@@ -4,9 +4,11 @@
 Usage:  python pm_check.py <repo> [--json]
 Exit:   0 = no errors (warnings allowed) · 1 = errors · 2 = bad usage
 
-In a linked worktree of a private-mode repo, project-management/ lives only in the main folder.
-find_pm() finds it there; the SessionStart hook imports it from this file and verify.py runs
-this file, so the rule exists once.
+In private mode the nested PM repo lives in the main folder, and each linked worktree of the
+host gets its own PM checkout (a linked worktree of the nested repo, on a PM branch named after
+the host branch). find_pm() finds the folder and pm_checkout_plan() says where a missing
+checkout goes; the SessionStart hook imports both from this file (and creates the checkout)
+and verify.py runs this file, so the rules exist once.
 
 Standard library only, Python 3.10+. Reads, never writes. The rules it checks are written out
 in app-factory's STANDARD.md. Canonical copy: app-factory/tools/pm_check.py. The copy at
@@ -49,7 +51,7 @@ ID_RES = {
 REPORT_RES = {
     "sessions": re.compile(r"^\d{4}-\d{2}-\d{2}-\d{4}(-[a-z0-9]+)*\.md$"),
     "phases": re.compile(r"^phase-[A-Za-z0-9]+(-[a-z0-9]+)*\.md$"),
-    "topics": re.compile(r"^\d{4}-\d{2}-\d{2}(-[a-z0-9]+)+\.md$"),
+    "topics": re.compile(r"^\d{4}-\d{2}-\d{2}(-[a-z0-9]+)+\.[A-Za-z0-9]+$"),  # attachments too
 }
 NEXT_PROMPT_RE = re.compile(r"^##\s+Next session prompt", re.IGNORECASE | re.MULTILINE)
 V1_MARKERS = ("tasks/tasks.md", "tasks.md", "chores/decisions.md", "chores/manual-tasks.md")
@@ -421,8 +423,10 @@ def same_path(a: str | Path, b: str | Path) -> bool:
 def find_pm(repo: Path) -> tuple[Path, bool]:
     """(the repo's project-management/ folder, whether it is the main folder's).
 
-    A linked worktree of a private-mode repo has no project-management/: the nested PM repo
-    lives only in the main folder, the parent of git's common dir."""
+    The repo's own folder comes first: the main folder's nested PM repo, or in a linked
+    worktree of a private-mode repo, the worktree's own PM checkout. A worktree without one
+    (made before 3.4, or one whose checkout couldn't be created) falls back to the main
+    folder's, the parent of git's common dir."""
     pm = repo / "project-management"
     if pm.is_dir():
         return pm, False
@@ -432,6 +436,34 @@ def find_pm(repo: Path) -> tuple[Path, bool]:
         if main_pm.is_dir() and not same_path(main_pm, pm):
             return main_pm, True
     return pm, False
+
+
+def is_pm_checkout(pm: Path) -> bool:
+    """A worktree's PM checkout: a linked worktree of the nested PM repo (`.git` is a file)."""
+    return (pm / ".git").is_file()
+
+
+def pm_checkout_plan(repo: Path) -> tuple[Path | None, str]:
+    """Where a linked worktree's own PM checkout comes from: (the main folder's nested PM repo,
+    the PM branch, which takes the host branch's name), or (None, why there is none)."""
+    if (repo / "project-management").exists():
+        return None, "it has a project-management/ folder"
+    if read_tier(repo)[0].get("pm_mode") != "private":
+        return None, "PM mode is not private"
+    rc, top = git(repo, "rev-parse", "--show-toplevel")
+    _, gitdir = git(repo, "rev-parse", "--path-format=absolute", "--git-dir")
+    _, common = git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    if rc != 0 or not same_path(top, repo) or same_path(gitdir, common):
+        return None, "not the root of a linked worktree"
+    main_pm = Path(common).parent / "project-management"
+    if not (main_pm / ".git").is_dir():
+        return None, "the main folder has no nested PM repo"
+    rc, branch = git(repo, "symbolic-ref", "--short", "-q", "HEAD")
+    if rc != 0:
+        return None, "the worktree has a detached HEAD"
+    if git(repo, "ls-tree", "-d", "--name-only", "HEAD", "project-management")[1]:
+        return None, f"'{branch}' still tracks project-management/ (.claude/rules/git.md)"
+    return main_pm, branch
 
 
 def check_pm_remote(pm: Path, rep: Report) -> None:
@@ -459,6 +491,43 @@ def check_pm_remote(pm: Path, rep: Report) -> None:
                  f"{upstream}; push it (git -C project-management push)")
 
 
+def worktrees_of(repo: Path) -> list[dict]:
+    """`git worktree list --porcelain`, one dict per worktree, the main folder first."""
+    _, porcelain = git(repo, "worktree", "list", "--porcelain")
+    return [dict(ln.split(" ", 1) if " " in ln else (ln, "") for ln in block.splitlines())
+            for block in porcelain.split("\n\n") if block.strip()]
+
+
+def check_pm_branches(pm: Path, rep: Report) -> None:
+    """The nested PM repo's PM checkouts and branches, seen from the main folder. Each one
+    belongs to a host worktree and lands with its host branch (.claude/rules/git.md)."""
+    main = next((b for b in ("main", "master")
+                 if git(pm, "rev-parse", "--verify", "-q", f"refs/heads/{b}")[0] == 0), None)
+    if main is None:
+        return
+    busy = {main}
+    for wt in worktrees_of(pm)[1:]:
+        branch = wt.get("branch", "").removeprefix("refs/heads/")
+        busy.add(branch)
+        if "prunable" in wt:
+            rep.warn("pm-checkout", None, None, f"the PM checkout {wt['worktree']} is gone (its "
+                     "host worktree was removed before it); its commits are on PM branch "
+                     f"'{branch}'. Land the branch, then git -C project-management worktree prune")
+    _, heads = git(pm, "for-each-ref", "--format=%(refname:short)", "refs/heads")
+    for branch in heads.splitlines():
+        if branch in busy:
+            continue
+        _, ahead = git(pm, "rev-list", "--count", f"{main}..{branch}")
+        if ahead == "0":
+            rep.warn("pm-branch", None, None, f"PM branch '{branch}' has nothing that isn't on "
+                     f"the PM repo's {main}; delete it (git -C project-management branch -d "
+                     f"{branch})")
+        elif ahead.isdigit():
+            rep.warn("pm-branch", None, None, f"PM branch '{branch}' has {ahead} commit(s) that "
+                     f"never reached the PM repo's {main}, and no checkout: land it "
+                     "(.claude/rules/git.md, Landing a worktree)")
+
+
 def check_git(repo: Path, pm: Path, rep: Report, fm: dict, policy: str, mode: str) -> None:
     rc, top = git(repo, "rev-parse", "--show-toplevel")
     if rc != 0:
@@ -472,8 +541,9 @@ def check_git(repo: Path, pm: Path, rep: Report, fm: dict, policy: str, mode: st
         if not (pm / ".git").exists():
             rep.error("private-mode", pm, None, "pm_mode is private but project-management/ "
                       "is not its own git repo")
-        else:
+        elif not is_pm_checkout(pm):  # a worktree's PM checkout leaves these to the main folder
             check_pm_remote(pm, rep)
+            check_pm_branches(pm, rep)
         if tracked:
             rep.error("private-mode", pm, None, "pm_mode is private but the host repo tracks "
                       "project-management/ files")
@@ -522,9 +592,7 @@ def check_git(repo: Path, pm: Path, rep: Report, fm: dict, policy: str, mode: st
         rc, log = git(repo, "reflog", "show", "--format=%H", f"refs/heads/{branch}")
         return rc != 0 or len(log.splitlines()) > 1  # one entry = created, never committed to
 
-    _, porcelain = git(repo, "worktree", "list", "--porcelain")
-    worktrees = [dict(ln.split(" ", 1) if " " in ln else (ln, "") for ln in block.splitlines())
-                 for block in porcelain.split("\n\n") if block.strip()]
+    worktrees = worktrees_of(repo)
     in_worktree = set()
     for wt in worktrees[1:]:
         branch = wt.get("branch", "").removeprefix("refs/heads/")
@@ -533,8 +601,11 @@ def check_git(repo: Path, pm: Path, rep: Report, fm: dict, policy: str, mode: st
             rep.warn("git-worktree", None, None, f"worktree record for {wt['worktree']} points at "
                      "a missing folder (git worktree prune)")
         elif branch and merged(branch):
+            first = (" its PM checkout first, then" if is_pm_checkout(
+                Path(wt["worktree"]) / "project-management") else "")
             rep.warn("git-worktree", None, None, f"worktree {wt['worktree']} is on '{branch}', "
-                     f"which is merged into {main}; remove the worktree and the branch")
+                     f"which is merged into {main}; remove{first} the worktree and the branch "
+                     "(.claude/rules/git.md)")
     _, heads = git(repo, "for-each-ref", "--format=%(refname:short)", "refs/heads")
     for branch in heads.splitlines():
         if branch != main and branch not in in_worktree and merged(branch):
@@ -562,7 +633,13 @@ def run(repo: Path) -> Report:
     pm, from_main = find_pm(repo)
     rep = Report(repo, ignores, pm)
     if from_main:
-        rep.notes.append(f"PM files: {pm.as_posix()} (the main folder's; this is a worktree)")
+        can, why = pm_checkout_plan(repo)
+        rep.notes.append(f"PM files: {pm.as_posix()} (the main folder's; this worktree has no PM "
+                         "checkout: " + ("python .claude/hooks/session_start.py . makes one)"
+                                         if can else f"{why})"))
+    elif is_pm_checkout(pm):
+        _, branch = git(pm, "symbolic-ref", "--short", "-q", "HEAD")
+        rep.notes.append(f"PM files: this worktree's PM checkout, on PM branch '{branch}'")
     if not pm.is_dir() and tier.get("pm_mode") == "private" and os.environ.get("CI"):
         rep.skipped.append("PM checks: private PM mode, and a CI checkout has no "
                            "project-management/")

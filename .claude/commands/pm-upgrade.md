@@ -14,24 +14,38 @@ If CURRENT.md's frontmatter has `pm: v3`, skip the steps below and do this inste
 (`<factory>` is `C:/Users/flow/CursorProjects/app-factory` throughout this file):
 1. `python <factory>/tools/sync.py .` (read only). It sorts every template-owned file into
    current, stale (untouched since install), changed (edited here) and missing, and prints the
-   repo's factory version and the current one. Show the user the lists.
-2. Where to work: under `main`, on main; under `pr`, a `chore/factory-<version>` branch.
-3. With the user's OK, `python <factory>/tools/sync.py . --apply`: it replaces stale files, adds
-   missing ones and records the version in `.claude/factory.json`. It never touches PM
-   content, CLAUDE.md, TIER.md or the repo's own rules.
-4. Each changed file: diff it against `<factory>/template/<path>` and merge the factory's
+   repo's factory version and the current one. For the PM picture run the factory's checker,
+   `python <factory>/tools/pm_check.py .`: the repo's own copy only knows its own version's
+   layout. Show the user both.
+2. Where to work: a `chore/factory-<version>` branch, merged when green under `main` (a
+   factory update is a risky change). In private PM mode, use a worktree on that branch
+   (`.claude/worktrees/factory-<version>`; a dispatched session is already in one). Its PM
+   checkout carries the PM changes on a PM branch that lands with the host branch, so neither
+   main's verify nor the vault sees a half-done update.
+3. Each changed file: diff it against `<factory>/template/<path>` and merge the factory's
    changes by hand, keeping the local ones. Say which you merged and which you left.
+4. With the user's OK, `python <factory>/tools/sync.py . --apply --merged <each file merged in
+   step 3>`. It replaces stale files, adds missing ones, records the version in
+   `.claude/factory.json`, and records the hand-merged files as merged with this version (a
+   file now identical to the template needs no `--merged`). It never touches PM content,
+   CLAUDE.md, TIER.md or the repo's own rules.
 5. Run the "Upgrade from" steps in `<factory>/CHANGELOG.md` for every version after the
-   repo's, oldest first.
-6. `python verify.py`, commit (`chore: app-factory <version>`), push per the policy (`pr`: push
-   the branch and open a PR). Note it in the session report.
+   repo's, oldest first. They also list the template's CLAUDE.md changes, which sync never
+   applies. A step only the user can do (a `settings.json` edit, a push) becomes a `C-n` with
+   the exact text or JSON in its Notes or `### C-n` block, not a line in chat.
+6. `python verify.py`, commit (`chore: app-factory <version>`), and land per the policy. Under
+   `main`: merge and push. Under `pr`: push the branch and open a PR. In private mode, follow
+   git.md's "Landing a worktree". A PM branch that changes the PM layout lands with the host
+   merge, never before it. Note it in the session report.
 
 **Ground rules**
 - **Never delete content.** What can't be placed goes to `project-management/archive/` with a
   first line saying where it came from and when. When a differently named file replaces an
   original (v1, custom layouts), the original goes there too; v2.1 files keep their names and
   are edited in place, so git already has their history.
-- Move with `git mv`, so history follows the file.
+- Move with `git mv`, so history follows the file, and commit the pure move on its own before
+  any edit. A file rewritten in the same commit (a fold, heavy row fixes) falls below git's
+  rename similarity, and `git log --follow` loses it.
 - Every migrated item keeps its old ID in Notes: `was A.1`, `was M-3`.
 - **Resumable:** the migration report `project-management/reports/topics/YYYY-MM-DD-pm-upgrade.md`
   is created in step 1 and carries the checklist below. If one exists with open boxes, read it
@@ -143,8 +157,8 @@ From the template: `hooks/` (all), `commands/`, `skills/cleanup/`, `tiers/`, and
 | --- | --- |
 | v1 `tasks/tasks.md` IDs `A.1`, `B.2.1`; flat `tasks.md`; kalshi `F-A01`; wsa ROADMAP rows 0.1–3.41 | `FEATURES.md` rows `F-n`, Phase = the old letter, `was <old id>` in Notes |
 | v2.1 `FEATURE_REGISTER.md` | `git mv` to `FEATURES.md`; rows keep their IDs |
-| v2.1 `plans/PLAN.md`, `ROADMAP.md`, `ARCHITECTURE.md`, `DATABASE.md` | the four sections of `PLAN.md`: `git mv plans/PLAN.md PLAN.md` so history follows, fold the other three in whole, then `git rm` them. Past ~500 lines, list in the report what could move next to the code; the migration itself moves nothing into the host |
-| any other file in `plans/` (one feature's plan, e.g. swpt-app's `F-336-publication-plan.md`) | `reports/topics/YYYY-MM-DD-<slug>.md`, dated by its last commit (`git mv`) |
+| v2.1 `plans/PLAN.md`, `ROADMAP.md`, `ARCHITECTURE.md`, `DATABASE.md` | the four sections of `PLAN.md`: `git mv plans/PLAN.md PLAN.md` in a commit of its own, then fold the other three in whole and `git rm` them. The template's intro goes on top, the old plan becomes `## Purpose and scope`, and each old file's note stays under its section, with "this file" made "this section". Past ~500 lines, list in the report what could move next to the code; the migration itself moves nothing into the host |
+| any other file in `plans/` (one feature's plan, e.g. swpt-app's `F-336-publication-plan.md`) | `reports/topics/YYYY-MM-DD-<slug>.md` with a lowercase slug (`2026-11-09-f-336-publication-plan.md`), dated by its last commit (`git mv`) |
 | v1 statuses TODO, WIP, BLOCKED, DONE; kalshi Planned, In progress, Blocked, Deferred | PLANNED, WIP, BLOCKED, DONE; Deferred → PLANNED with Phase `later` |
 | v1 `chores/decisions.md`; kalshi `D-001` | `DECISIONS.md` `D-n`; kalshi keeps its numbers, unpadded (`D-1`) |
 | beacon's "Provisional" table; kalshi Proposed | PROPOSED entries in Needs you |
@@ -154,7 +168,8 @@ From the template: `hooks/` (all), `commands/`, `skills/cleanup/`, `tiers/`, and
 | v1 `chores/manual-tasks.md` `M-n`; kalshi `CH-nn` | `CHORES.md` `C-n`, `was M-3` in Notes, Due blank unless known |
 | v1 `plans/roadmap.md` with Out of scope, Approach and Deferred sections | `PLAN.md`'s Roadmap, its out-of-scope list and Architecture, and register rows with Phase `later` |
 | `reports/session-YYYY-MM-DD.md`, `*-session-handoff.md`, slug-named sessions | `reports/sessions/YYYY-MM-DD-HHMM[-slug].md`; when the real time is unknown, the time of the commit that added it (`git log --diff-filter=A --format=%ci -- <file>`) |
-| research, review, audit and change-log reports; `reports/reviews/`; kalshi `YYYY-MM-DD_topic.md` | `reports/topics/YYYY-MM-DD-topic.md` (not the frozen ones) |
+| research, review, audit and change-log reports; `reports/reviews/`; kalshi `YYYY-MM-DD_topic.md` | `reports/topics/YYYY-MM-DD-topic.md`, the slug lowercased (`F-314` → `f-314`; not the frozen ones) |
+| a non-Markdown file anywhere under `reports/`, an attachment a report cites (swpt-app's `reports/reviews/2026-10-18-commercial-hydrology-review.pdf`) | `reports/topics/YYYY-MM-DD-<slug>.<ext>` (`git mv`): the same name rules, its extension kept, dated by its name or else by the commit that added it. Fix links to its old path |
 | an oversized `CURRENT.md` (e.g. a 237-line log) | its history → one session report dated by its last commit; CURRENT rewritten under 20 lines |
 
 - New IDs are assigned in the old order, so the map reads top to bottom. Put the full
@@ -186,8 +201,11 @@ Before anything moves:
   tracks `project-management/` overwrites the nested repo's working files without a word, and
   switching back deletes them. Committed nested content can be restored; uncommitted edits are
   lost.
-- **The nested repo lives only in the main folder**, never in a worktree: `git worktree remove`
-  deletes ignored files, a nested repo included, without asking.
+- **The nested repo lives only in the main folder.** Never `git init` one in a worktree:
+  `git worktree remove` deletes ignored files, a nested repo included, without asking. Once it
+  exists, each worktree gets a PM checkout of it instead (`.claude/rules/git.md`).
+- **The main-folder steps run in an interactive session.** A background session can't edit the
+  main folder until it moves into a worktree, and the nested repo is built there.
 
 ### Under `main`: on main, in this order
 
