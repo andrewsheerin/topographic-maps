@@ -4,6 +4,10 @@
 Usage:  python pm_check.py <repo> [--json]
 Exit:   0 = no errors (warnings allowed) · 1 = errors · 2 = bad usage
 
+In a linked worktree of a private-mode repo, project-management/ lives only in the main folder.
+find_pm() finds it there; the SessionStart hook imports it from this file and verify.py runs
+this file, so the rule exists once.
+
 Standard library only, Python 3.10+. Reads, never writes. The rules it checks are written out
 in app-factory's STANDARD.md. Canonical copy: app-factory/tools/pm_check.py. The copy at
 template/.claude/skills/cleanup/pm_check.py must stay byte-identical (a test enforces it).
@@ -29,10 +33,13 @@ PM_MODES = {"committed", "private"}
 FRONTMATTER_KEYS = ("pm", "profile", "git_policy", "pm_mode", "updated", "branch", "phase",
                     "wip", "blocked_on")
 CURRENT_MAX_LINES = 20
+PLAN_MAX_LINES = 500
+PM_FILES = ("CURRENT.md", "FEATURES.md", "DECISIONS.md", "CHORES.md", "PLAN.md")
+RENAMED = {"FEATURE_REGISTER.md": "FEATURES.md", "plans": "PLAN.md"}  # in v3.2
 REGISTER_STATUSES = {"IDEA", "PLANNED", "WIP", "BLOCKED", "DONE", "DROPPED"}
 NEEDS_YOU_STATUSES = {"OPEN", "PROPOSED"}
 RESOLVED_STATUSES = {"RESOLVED", "SUPERSEDED"}
-CHORE_STATUSES = {"TODO", "DONE"}
+CHORE_STATUSES = {"TODO", "DONE", "DROPPED"}
 NONE_VALUES = {"", "-", "—", "none"}
 ID_RES = {
     "F": re.compile(r"^F-[1-9]\d*[a-z]?$"),
@@ -51,15 +58,27 @@ DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 class Report:
-    def __init__(self, repo: Path, ignores: list[str]):
+    def __init__(self, repo: Path, ignores: list[str], pm: Path | None = None):
         self.repo, self.ignores = repo, ignores
+        self.pm = pm or repo / "project-management"
         self.errors: list[dict] = []
         self.warnings: list[dict] = []
         self.skipped: list[str] = []
+        self.notes: list[str] = []
         self.ignored = 0
 
+    def rel(self, path) -> str | None:
+        if not isinstance(path, Path):
+            return path
+        for base in (self.repo, self.pm.parent):  # PM files may sit in the main folder
+            try:
+                return path.relative_to(base).as_posix()
+            except ValueError:
+                pass
+        return path.as_posix()
+
     def _add(self, bucket, code, path, line, message):
-        rel = path.relative_to(self.repo).as_posix() if isinstance(path, Path) else path
+        rel = self.rel(path)
         if rel and any(fnmatch.fnmatch(rel, g) for g in self.ignores):
             self.ignored += 1
             return
@@ -238,7 +257,7 @@ def check_current(pm: Path, rep: Report, tier: dict) -> dict:
 
 
 def check_register(pm: Path, rep: Report) -> dict[str, str]:
-    path = pm / "FEATURE_REGISTER.md"
+    path = pm / "FEATURES.md"
     statuses, seen = {}, set()
     for t in parse_tables(read_lines(path), path, rep):
         if t.col("id") is None or t.col("status") is None:
@@ -324,12 +343,24 @@ def check_chores(pm: Path, rep: Report) -> dict[str, str]:
             cid, status = t.cell(cells, "id"), t.cell(cells, "status").upper()
             check_id(rep, path, line, "C", cid, seen)
             if status not in CHORE_STATUSES:
-                rep.error("status", path, line, f"{cid}: status '{status}' is not TODO or DONE")
+                rep.error("status", path, line, f"{cid}: status '{status}' is not one of "
+                          + ", ".join(sorted(CHORE_STATUSES)))
             due = t.cell(cells, "due")
             if t.col("due") is not None and not is_none(due) and not DATE_RE.match(due):
                 rep.error("due", path, line, f"{cid}: Due '{due}' is not YYYY-MM-DD")
             found[cid] = status
     return found
+
+
+def check_plan(pm: Path, rep: Report) -> None:
+    path = pm / "PLAN.md"
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    while lines and not lines[-1].strip():
+        lines.pop()
+    if len(lines) > PLAN_MAX_LINES:  # a soft target: bigger projects may run longer
+        rep.warn("plan-length", path, None,
+                 f"{len(lines)} lines (target {PLAN_MAX_LINES}); check that detail which "
+                 "could live with the code, or a one-feature plan, hasn't crept in")
 
 
 def check_reports(pm: Path, rep: Report) -> None:
@@ -368,7 +399,7 @@ def check_cross(pm: Path, rep: Report, fm: dict, reg: dict, dec: dict, chores: d
         status = {"D": dec, "C": chores, "F": reg}.get(ref[:1], {}).get(ref)
         if status is None:
             rep.warn("blocked-on", path, 1, f"blocked_on names {ref}, which doesn't exist")
-        elif status in RESOLVED_STATUSES | {"DONE"}:
+        elif status in RESOLVED_STATUSES | {"DONE", "DROPPED"}:
             rep.warn("blocked-on", path, 1, f"blocked_on names {ref}, which is already {status}")
 
 
@@ -387,7 +418,48 @@ def same_path(a: str | Path, b: str | Path) -> bool:
     return os.path.normcase(str(Path(a).resolve())) == os.path.normcase(str(Path(b).resolve()))
 
 
-def check_git(repo: Path, rep: Report, fm: dict, policy: str, mode: str) -> None:
+def find_pm(repo: Path) -> tuple[Path, bool]:
+    """(the repo's project-management/ folder, whether it is the main folder's).
+
+    A linked worktree of a private-mode repo has no project-management/: the nested PM repo
+    lives only in the main folder, the parent of git's common dir."""
+    pm = repo / "project-management"
+    if pm.is_dir():
+        return pm, False
+    rc, common = git(repo, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    if rc == 0 and common:
+        main_pm = Path(common).parent / "project-management"
+        if main_pm.is_dir() and not same_path(main_pm, pm):
+            return main_pm, True
+    return pm, False
+
+
+def check_pm_remote(pm: Path, rep: Report) -> None:
+    """The nested PM repo's off-disk copy: a remote, and nothing unpushed (as of the last
+    fetch; pm_check never fetches)."""
+    _, remotes = git(pm, "remote")
+    if not remotes:
+        rep.warn("pm-remote", pm, None, "the nested PM repo has no remote, so the PM files have "
+                 "no off-disk copy (/pm-upgrade step 6 sets one up)")
+        return
+    rc, branch = git(pm, "symbolic-ref", "--short", "-q", "HEAD")
+    if rc != 0:
+        return
+    rc, upstream = git(pm, "rev-parse", "--abbrev-ref", "-q", f"{branch}@{{upstream}}")
+    if rc != 0 or not upstream:
+        remote = remotes.splitlines()[0]
+        upstream = f"{remote}/{branch}"
+        if git(pm, "rev-parse", "--verify", "-q", f"refs/remotes/{upstream}")[0] != 0:
+            rep.warn("pm-remote", pm, None, f"the nested PM repo's {branch} has never been "
+                     f"pushed to {remote} (git -C project-management push -u {remote} {branch})")
+            return
+    _, ahead = git(pm, "rev-list", "--count", f"{upstream}..{branch}")
+    if ahead.isdigit() and int(ahead) > 0:
+        rep.warn("pm-ahead", pm, None, f"the nested PM repo is {ahead} commit(s) ahead of "
+                 f"{upstream}; push it (git -C project-management push)")
+
+
+def check_git(repo: Path, pm: Path, rep: Report, fm: dict, policy: str, mode: str) -> None:
     rc, top = git(repo, "rev-parse", "--show-toplevel")
     if rc != 0:
         rep.skipped.append("git checks: not a git repository")
@@ -395,16 +467,17 @@ def check_git(repo: Path, rep: Report, fm: dict, policy: str, mode: str) -> None
     if not same_path(top, repo):
         rep.skipped.append(f"git checks: {repo.name} is not a repository root")
         return
-    pm = repo / "project-management"
     _, tracked = git(repo, "ls-files", "--", "project-management")
     if mode == "private":
         if not (pm / ".git").exists():
             rep.error("private-mode", pm, None, "pm_mode is private but project-management/ "
                       "is not its own git repo")
+        else:
+            check_pm_remote(pm, rep)
         if tracked:
             rep.error("private-mode", pm, None, "pm_mode is private but the host repo tracks "
                       "project-management/ files")
-        if git(repo, "check-ignore", "-q", "project-management")[0] != 0:
+        if git(pm.parent, "check-ignore", "-q", "project-management")[0] != 0:
             rep.error("private-mode", pm, None, "project-management/ is not excluded from the "
                       "host repo (add it to .git/info/exclude)")
     elif mode == "committed" and (pm / ".git").exists():
@@ -467,6 +540,12 @@ def check_git(repo: Path, rep: Report, fm: dict, policy: str, mode: str) -> None
         if branch != main and branch not in in_worktree and merged(branch):
             rep.warn("git-merged-branch", None, None,
                      f"branch '{branch}' is merged into {main}; delete it")
+        if mode == "private" and branch != main and git(
+                repo, "ls-tree", "-d", "--name-only", branch, "project-management")[1]:
+            rep.warn("pm-old-branch", None, None,
+                     f"branch '{branch}' still tracks project-management/: checking it out in "
+                     "the main folder overwrites the private PM files. Open it in a worktree "
+                     f"and merge {main} into it there (.claude/rules/git.md)")
     wt_dir = repo / ".claude" / "worktrees"
     if wt_dir.is_dir():
         known = [wt.get("worktree", "") for wt in worktrees]
@@ -480,10 +559,19 @@ def check_git(repo: Path, rep: Report, fm: dict, policy: str, mode: str) -> None
 
 def run(repo: Path) -> Report:
     tier, ignores = read_tier(repo)
-    rep = Report(repo, ignores)
-    pm = repo / "project-management"
+    pm, from_main = find_pm(repo)
+    rep = Report(repo, ignores, pm)
+    if from_main:
+        rep.notes.append(f"PM files: {pm.as_posix()} (the main folder's; this is a worktree)")
+    if not pm.is_dir() and tier.get("pm_mode") == "private" and os.environ.get("CI"):
+        rep.skipped.append("PM checks: private PM mode, and a CI checkout has no "
+                           "project-management/")
+        return rep
     if not pm.is_dir():
-        rep.error("missing-file", pm, None, "no project-management/ folder")
+        rep.error("missing-file", pm, None, "no project-management/ folder" + (
+            "; if the PR that untracks it just merged, finish /pm-upgrade step 6 in the main "
+            "folder (restore it from the content commit)" if tier.get("pm_mode") == "private"
+            else ""))
         return rep
     if not (repo / ".claude" / "TIER.md").is_file():
         rep.error("missing-file", repo / ".claude" / "TIER.md", None, "no .claude/TIER.md")
@@ -495,14 +583,19 @@ def run(repo: Path) -> Report:
         parent = (pm / marker).parent
         if parent.is_dir() and Path(marker).name in os.listdir(parent):
             rep.error("layout", pm / marker, None, "pre-v3 PM layout; run /pm-upgrade")
-    missing = [n for n in ("CURRENT.md", "FEATURE_REGISTER.md", "DECISIONS.md", "CHORES.md")
-               if not (pm / n).is_file()]
+    for old, new in RENAMED.items():
+        if (pm / old).exists():
+            rep.error("layout", pm / old, None,
+                      f"{old} became {new} in v3.2; /pm-upgrade moves it")
+    missing = [n for n in PM_FILES if not (pm / n).is_file()]
     for n in missing:
         rep.error("missing-file", pm / n, None, f"no {n}")
     if not (pm / "reports" / "sessions").is_dir():
         rep.error("missing-file", pm / "reports" / "sessions", None, "no reports/sessions/ folder")
     fm = check_current(pm, rep, tier) if "CURRENT.md" not in missing else {}
-    reg = check_register(pm, rep) if "FEATURE_REGISTER.md" not in missing else {}
+    reg = check_register(pm, rep) if "FEATURES.md" not in missing else {}
+    if "PLAN.md" not in missing:
+        check_plan(pm, rep)
     dec = check_decisions(pm, rep) if "DECISIONS.md" not in missing else {}
     chores = check_chores(pm, rep) if "CHORES.md" not in missing else {}
     check_reports(pm, rep)
@@ -510,7 +603,7 @@ def run(repo: Path) -> Report:
         check_cross(pm, rep, fm, reg, dec, chores)
     policy = tier.get("git_policy") or fm.get("git_policy", "pr")
     mode = tier.get("pm_mode") or fm.get("pm_mode", "committed")
-    check_git(repo, rep, fm, policy, mode)
+    check_git(repo, pm, rep, fm, policy, mode)
     return rep
 
 
@@ -525,9 +618,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     rep = run(repo)
     if args.json:
-        print(json.dumps({"repo": str(repo), "ok": not rep.errors, "errors": rep.errors,
-                          "warnings": rep.warnings, "ignored": rep.ignored,
-                          "skipped": rep.skipped}, indent=2))
+        print(json.dumps({"repo": str(repo), "pm": str(rep.pm), "ok": not rep.errors,
+                          "errors": rep.errors, "warnings": rep.warnings,
+                          "ignored": rep.ignored, "skipped": rep.skipped,
+                          "notes": rep.notes}, indent=2))
     else:
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8")
@@ -535,6 +629,8 @@ def main(argv: list[str] | None = None) -> int:
             for f in items:
                 where = (f["path"] or "(git)") + (f":{f['line']}" if f["line"] else "")
                 print(f"{label} {f['code']:<18} {where}  {f['message']}")
+        for s in rep.notes:
+            print(f"note  {s}")
         for s in rep.skipped:
             print(f"skip  {s}")
         print(f"pm_check: {len(rep.errors)} error(s), {len(rep.warnings)} warning(s)"

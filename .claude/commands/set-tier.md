@@ -10,8 +10,8 @@ moves files, so it goes through `/pm-upgrade` step 6.
 1. Read `.claude/TIER.md` and the current and target files in `.claude/tiers/`. Summarize what
    changes for THIS project in two short lists: autonomy, rigor.
 2. **Upgrading** (L1→L2, L2→L3): audit the gap against the target's rigor table (auth, secrets,
-   tests, CI, migrations, docs) and propose a **hardening phase** for `ROADMAP.md`, its items as
-   register rows. The upgrade is done when that phase closes, not when the file says so.
+   tests, CI, migrations, docs) and propose a **hardening phase** for PLAN.md's Roadmap, its
+   items as register rows. The upgrade is done when that phase closes, not when the file says so.
 3. **Downgrading:** confirm intent explicitly. For a deployed app with real users moving off
    L3, push back: deployed users don't care what this file says.
 
@@ -20,6 +20,9 @@ moves files, so it goes through `/pm-upgrade` step 6.
   and that the remote's main is protected (a chore for the user if not).
 - `pr → main`: Claude will commit on and push main. Confirm that pushing main doesn't deploy, or
   set `Deploys on push: yes`.
+- Whenever the result is `pr` or `Deploys on push: yes`, the push-main lines in
+  `.claude/settings.json` sit under `deny`; for `main` with no live site, under `allow`. Settings
+  files are the user's to edit: hand over the change.
 
 **On the user's confirmation:** edit `.claude/TIER.md` (the `TIER:` line, the `@tiers/Ln.md`
 import, `Git policy:`, `Deploys on push:`), mirror `git_policy` in `CURRENT.md`'s frontmatter,

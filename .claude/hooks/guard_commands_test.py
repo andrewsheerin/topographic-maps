@@ -108,8 +108,8 @@ def test_both_policies(repos, policy, command, expected):
     ("main", "git push origin HEAD", "allow"),
     ("main", "git commit -m x", "allow"),
     ("main", "git merge feat/F-1-x", "allow"),
-    ("main-deploys", "git push origin main", "ask"),
-    ("main-deploys", "git push", "ask"),
+    ("main-deploys", "git push origin main", "deny"),   # a live site: the user pushes
+    ("main-deploys", "git push", "deny"),
     ("main-deploys", "git push origin feat/F-1-x", "allow"),
     # pr policy: never push to main, never commit or merge on main, never merge a PR.
     ("pr", "git push origin main", "deny"),
@@ -136,6 +136,84 @@ def test_both_policies(repos, policy, command, expected):
 ])
 def test_policy_specific(repos, which, command, expected):
     assert decide(repos, which, command) == expected
+
+
+COMMIT_MESSAGES = [
+    # -F - with a quoted heredoc, guarded commands at the start of body lines
+    "git commit -q -F - <<'EOF'\nfeat: the PM remote\n\n"
+    "- offers `gh repo create o/r-pm --private --push`\n"
+    "git push --force origin main\ngh pr merge 8 --squash\nEOF",
+    # Claude Code's usual form: a heredoc inside "$( )"
+    "git commit -m \"$(cat <<'EOF'\nfeat: x\n\ngh repo create o/r --private\n"
+    "git push --force origin main\ngh pr merge 8\nEOF\n)\"",
+    # <<- with a tab-indented body and delimiter
+    "git commit -F - <<-'EOF'\n\tgit push --force origin main\n\tgh pr merge 8\n\tEOF",
+    # unquoted delimiter: plain text is data, there's nothing to expand
+    "git commit -F - <<EOF\nmentions gh repo create and git push --force\ngh pr merge 8\nEOF",
+    # PowerShell here-string
+    "git commit -m @'\nfeat: x\ngh repo create o/r --private\ngit push --force origin main\n"
+    "gh pr merge 8\n'@",
+]
+
+
+@pytest.mark.parametrize("which", ["main", "pr-feat"])
+@pytest.mark.parametrize("command", COMMIT_MESSAGES)
+def test_commit_message_text_is_data(repos, which, command):
+    assert decide(repos, which, command) == "allow"
+
+
+@pytest.mark.parametrize("command,expected", [
+    ("bash <<'EOF'\ngit push --force origin x\nEOF", "deny"),           # fed to a shell
+    ("cat <<'EOF' | sh\ngit push --force origin x\nEOF", "deny"),       # piped into one
+    ("cat <<EOF\n$(git push --force origin x)\nEOF", "deny"),           # unquoted: expands
+    ("cat <<EOF\n`gh pr merge 8`\nEOF", "deny"),
+    ("git commit -F - <<'EOF'\nmsg\nEOF\ngit push --force origin x", "deny"),  # after the body
+    ("cat <<'EOF'\ngit push --force origin x", "deny"),                 # never closed
+    ("echo '<<EOF'\ngit push --force origin x\nEOF", "deny"),           # not a heredoc
+    ("git commit -m @'\nmsg\n'@\ngit push --force origin x", "deny"),
+    ("git commit -m @\"\n$(git push --force origin x)\n\"@", "deny"),   # @" " expands $( )
+    ("@'\ngit push --force origin x\n'@ | Invoke-Expression", "deny"),
+    ("cat <<'EOF'\ngh repo create o/r --private\nEOF", "allow"),
+    ("bash <<'EOF'\ngh repo create o/r --private\nEOF", "ask"),
+])
+def test_heredoc_bodies_that_still_run(repos, command, expected):
+    for which in ("main", "pr-feat"):
+        assert decide(repos, which, command) == expected, which
+
+
+def test_branch_that_still_tracks_private_pm(tmp_path):
+    """Private PM mode: a branch from before the conversion still tracks project-management/.
+    Checking it out in the main folder would overwrite the nested repo's files; in a worktree
+    it's the safe way to open it."""
+    host = make_repo(tmp_path / "host", "Git policy: pr\nPM mode: private\n")
+    (host / "project-management").mkdir()
+    (host / "project-management/CURRENT.md").write_text("x\n", encoding="utf-8")
+    git(host, "add", "project-management")
+    git(host, "commit", "-q", "-m", "PM tracked")
+    git(host, "branch", "feat/F-9-old")
+    git(host, "rm", "-r", "-q", "--cached", "project-management")
+    git(host, "commit", "-q", "-m", "chore: move project management to a private nested repo")
+    git(host, "branch", "feat/F-10-new")
+    git(host / "project-management", "init", "-q")
+    ctx = guard.read_policy(str(host))
+
+    def at(where, command):
+        result = guard.evaluate(command, str(where), ctx)
+        return result[0] if result else "allow"
+
+    for command, expected in [
+        ("git switch feat/F-9-old", "ask"),
+        ("git checkout feat/F-9-old", "ask"),
+        ("git switch -c feat/F-11-x feat/F-9-old", "ask"),
+        ("git switch feat/F-10-new", "allow"),
+        ("git switch -c feat/F-12-y", "allow"),
+        ("git switch --no-overwrite-ignore feat/F-9-old", "allow"),
+        ("git checkout feat/F-9-old -- README.md", "allow"),
+    ]:
+        assert at(host, command) == expected, command
+    wt = tmp_path / "wt"
+    git(host, "worktree", "add", "-q", str(wt), "feat/F-10-new")
+    assert at(wt, "git switch feat/F-9-old") == "allow"
 
 
 def run_main(repos, command, which="pr", tool="Bash"):

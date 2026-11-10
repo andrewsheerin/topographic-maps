@@ -1,0 +1,29 @@
+{
+  "factory": "3.3",
+  "files": {
+    ".claude/commands/add-feature.md": "0d6222fd5b423ebf",
+    ".claude/commands/log-decision.md": "6a77ca842b6e729d",
+    ".claude/commands/new-app.md": "92352c34540a2300",
+    ".claude/commands/phase-report.md": "3d6c3fbd2a7e3983",
+    ".claude/commands/pm-upgrade.md": "8cb75f54397d6670",
+    ".claude/commands/set-tier.md": "05f314c9b831f0d0",
+    ".claude/commands/wrap-session.md": "f89435b25181a0bb",
+    ".claude/hooks/format_on_write.py": "1f69b606781c9f9a",
+    ".claude/hooks/guard_commands.py": "1954ed1bb2ae884e",
+    ".claude/hooks/guard_commands_test.py": "819cd9cf98fc2b0f",
+    ".claude/hooks/session_start.py": "904f292049600960",
+    ".claude/rules/backend-standards.md": "927bba3ad80887f3",
+    ".claude/rules/frontend-standards.md": "422bb0a17d3db310",
+    ".claude/rules/git.md": "6df1058335d901d1",
+    ".claude/rules/project-management.md": "b81dffd60a797466",
+    ".claude/rules/security.md": "65a2c453b60f8435",
+    ".claude/rules/testing.md": "a89c963fa60ccf4d",
+    ".claude/skills/cleanup/SKILL.md": "11ab610beecf6b10",
+    ".claude/skills/cleanup/pm_check.py": "dd064397a968f373",
+    ".claude/tiers/L1.md": "0c61d7b9f5789861",
+    ".claude/tiers/L2.md": "090c6d5394ee7cc9",
+    ".claude/tiers/L3.md": "bad01d0b4a59fc93",
+    "verify.py": "c43c0939582e2b33"
+  },
+  "skip": {}
+}
