@@ -1,21 +1,21 @@
 {
-  "factory": "3.5",
+  "factory": "3.6",
   "files": {
     ".claude/commands/add-feature.md": "0d6222fd5b423ebf",
     ".claude/commands/log-decision.md": "6a77ca842b6e729d",
     ".claude/commands/new-app.md": "92352c34540a2300",
     ".claude/commands/phase-report.md": "3d6c3fbd2a7e3983",
-    ".claude/commands/pm-upgrade.md": "ee4da115530a0257",
+    ".claude/commands/pm-upgrade.md": "f842f97601a1b52e",
     ".claude/commands/set-tier.md": "05f314c9b831f0d0",
-    ".claude/commands/wrap-session.md": "5e1393255ce69d82",
+    ".claude/commands/wrap-session.md": "4f3b19c7fa88e768",
     ".claude/hooks/format_on_write.py": "1f69b606781c9f9a",
     ".claude/hooks/guard_commands.py": "fb0507c0f867d885",
     ".claude/hooks/guard_commands_test.py": "b7ad421872439835",
     ".claude/hooks/session_start.py": "567838a2734076d9",
     ".claude/rules/backend-standards.md": "927bba3ad80887f3",
     ".claude/rules/frontend-standards.md": "422bb0a17d3db310",
-    ".claude/rules/git.md": "0c9ed729951953df",
-    ".claude/rules/project-management.md": "13cb23254fc8815a",
+    ".claude/rules/git.md": "a7163f1cd8632280",
+    ".claude/rules/project-management.md": "0a4c728168589168",
     ".claude/rules/science-integrity.md": "75baf8408988916a",
     ".claude/rules/security.md": "65a2c453b60f8435",
     ".claude/rules/testing.md": "a89c963fa60ccf4d",
@@ -25,7 +25,7 @@
     ".claude/tiers/L1.md": "0c61d7b9f5789861",
     ".claude/tiers/L2.md": "090c6d5394ee7cc9",
     ".claude/tiers/L3.md": "bad01d0b4a59fc93",
-    "verify.py": "676512f80bad440b"
+    "verify.py": "33b289fe57320d8b"
   },
   "skip": {}
 }

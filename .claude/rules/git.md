@@ -89,11 +89,43 @@ Rules:
   repo, and each is removed once its branch is merged ("Landing a worktree" below). `/cleanup`
   finds the ones left behind.
 - Git refuses to check out one branch in two worktrees; give each its own.
-- A worktree session doesn't rewrite `CURRENT.md`; the main-folder session owns it. It writes its
-  own session report and register rows.
+- A new worktree is set up before `verify.py` runs there ("Setting up a worktree" below).
+- A worktree session updates `CURRENT.md` on its branch, written as it should read once the
+  branch has landed ("F-12 is on main", not "waiting on the branch"). It reaches main only
+  with the branch, so main never shows it early, and nobody has to refresh it after landing.
+  The session also writes its own report and register rows.
 - Landing a worktree (merging it, pushing main, removing it) runs from the main folder, below.
   Under `pr`, the branch may be pushed and its PR opened from the worktree.
 - The stash is shared by every worktree, so park work in a WIP commit instead.
+
+## Setting up a worktree
+
+A new worktree holds the tracked files and nothing else: no `.venv`, no
+`frontend/node_modules`. Until it has its own, `verify.py` there fails and names this section.
+From the worktree's folder, skipping what the repo doesn't have (`../../..` is the main folder):
+
+```
+# PowerShell
+..\..\..\.venv\Scripts\python.exe -m venv .venv
+..\..\..\.venv\Scripts\python.exe -m pip freeze --exclude-editable > .venv\main-freeze.txt
+.venv\Scripts\python.exe -m pip install -r .venv\main-freeze.txt
+npm ci --prefix frontend
+
+# bash (in Git Bash on Windows, Scripts/python.exe where this says bin/python)
+../../../.venv/bin/python -m venv .venv
+../../../.venv/bin/python -m pip freeze --exclude-editable > .venv/main-freeze.txt
+.venv/bin/python -m pip install -r .venv/main-freeze.txt
+npm ci --prefix frontend
+```
+
+- The new `.venv` gets the main folder's Python and the same package versions. An editable
+  install (`pip install -e backend`) is left out of the freeze: repeat it from the worktree, so
+  it points at the worktree's own code.
+- Both folders are gitignored, so the worktree stays clean, and both go when it is removed.
+- Never link to the main folder's copies instead. eslint resolves its config's imports from the
+  worktree, so the main folder's `node_modules` can't stand in, and removing a worktree that
+  holds a junction or symlink can delete what it points to. A branch that changes dependencies
+  installs them in its own `.venv`, not the main folder's.
 
 ## Private PM mode: each worktree gets a PM checkout
 
@@ -105,7 +137,7 @@ PM repo's main. The SessionStart hook creates it when a session starts in the wo
 project-management/ is this worktree's own checkout…`). A session that moved in later
 (EnterWorktree) runs `python .claude/hooks/session_start.py .` from the worktree. Commits there
 go straight into the main folder's nested repo, on the PM branch, so a background session can
-write its report, register rows and chores without touching the main folder.
+write its report, CURRENT.md, register rows and chores without touching the main folder.
 
 - **Commit PM work as you go** (`git -C project-management commit …`), and never stop with it
   uncommitted. Git deletes the ignored checkout along with its host worktree, and Claude Code's
@@ -134,8 +166,11 @@ worktree has no PM checkout (committed mode, or a worktree from before 3.4).
    git -C .claude/worktrees/<name> status --porcelain
    git -C .claude/worktrees/<name>/project-management status --porcelain
    ```
-2. A background session's worktree is locked by its job (`git worktree list` shows `locked`).
-   Run `git worktree unlock .claude/worktrees/<name>` before removing it. Delete the job
+2. A background session's worktree belongs to its job. Land it only after the job has stopped
+   (`claude stop <id>`), and only then remove anything: a running session can still commit,
+   and on Windows its open folder makes `git worktree remove` fail halfway, deleting the files
+   but not the folder. The job also locked the worktree (`git worktree list` shows `locked`):
+   `git worktree unlock .claude/worktrees/<name>`, before the commands below. Delete the job
    (`claude rm`) only after the PM checkout is gone: deleting it can remove the host worktree,
    and the PM checkout with it.
 
@@ -152,7 +187,8 @@ git -C project-management branch -d <branch>
 git branch -d <branch>
 ```
 
-Under `pr` (verify checks the worktree, and reads its PM checkout there):
+Under `pr` (verify checks the worktree, and reads its PM checkout there; a worktree that was
+never set up gets its `.venv` and `node_modules` first, "Setting up a worktree" above):
 ```
 python .claude/worktrees/<name>/verify.py
 git -C .claude/worktrees/<name> push -u origin <branch>
@@ -170,9 +206,12 @@ because the PM repo moves on its own. The exception is a PM branch that changes 
 (a factory update): it waits for the merge, so main's verify stays green. The worktree may
 also stay until the merge if follow-ups are likely; the PM checkout still comes off first.
 
-**When the PM merge stops on a conflict:**
-- `CURRENT.md`: take the main folder's side (`git -C project-management checkout --ours
-  CURRENT.md`).
+**When the PM merge stops on a conflict** (in committed mode, the same rules hold for a host
+merge that conflicts in `project-management/`: drop `-C project-management`, prefix the paths
+with `project-management/`, and an abort leaves the whole branch unlanded):
+- `CURRENT.md`: the branch wrote it as of landing, so take its side
+  (`git -C project-management checkout --theirs CURRENT.md`), then add back any line from
+  main's side that is still true and that the branch doesn't cover. It stays one snapshot.
 - A table (FEATURES, CHORES, the tables in DECISIONS): keep every row from both sides, one line
   each, in ID order. A row both sides changed gets combined: the later status, and both sides'
   Notes. If both sides took the same ID for different items, the branch's item takes the next

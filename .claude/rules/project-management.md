@@ -43,7 +43,12 @@ blocked_on: D-3, C-2    # or —
 ```
 
 Body: right now, blocked on, next. A snapshot, never a log. Rewritten at /wrap-session, not
-mid-task. A session in a linked worktree leaves CURRENT.md to the main-folder session.
+mid-task. A session on a branch or in a linked worktree rewrites it on that branch, as it
+should read once the branch is on main: "F-12 is on main", not "waiting on the branch", and
+`branch: main`. It reaches main only when the branch lands, so main never shows it early or
+stale. In private mode that is the worktree's PM checkout, on its PM branch. Under `pr` a PM
+branch lands when the PR opens, before the merge, so there it says the PR waits on the user's
+merge, and `branch:` names the PR's branch.
 
 ## IDs and statuses
 
